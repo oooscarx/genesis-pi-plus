@@ -1,0 +1,23 @@
+[project]
+name = "genesis-pi-plus"
+version = "0.1.0"
+description = "Genesis adaptation scaffolding for the pi_plus robot."
+readme = "README.md"
+authors = [
+    { name = "Shibo Xia", email = "xsb25@mails.tsinghua.edu.cn" }
+]
+requires-python = ">=3.10, <3.12"
+dependencies = [
+    "genesis-world",
+    "numpy",
+    "pyyaml",
+    "torch",
+    "tqdm",
+]
+
+[tool.setuptools.packages.find]
+include = ["genesis_pi_plus*"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

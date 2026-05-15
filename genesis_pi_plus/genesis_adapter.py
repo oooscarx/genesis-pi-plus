@@ -1,0 +1,112 @@
+"""Thin Genesis API boundary for pi_plus.
+
+All direct Genesis calls live here so uncertain APIs are isolated from the
+controller, observation, and task code.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from .assets import ensure_exists
+
+
+def _import_genesis():
+    try:
+        import genesis as gs  # type: ignore
+    except ImportError as exc:
+        raise RuntimeError("Genesis is not installed. Run `uv sync` first.") from exc
+    return gs
+
+
+def init_genesis(headless: bool = True):
+    """Initialize Genesis with a headless-safe default."""
+    gs = _import_genesis()
+    # TODO: Verify the exact backend/headless knobs against the installed
+    # Genesis version on the CUDA training host.
+    try:
+        gs.init(backend=gs.cuda if hasattr(gs, "cuda") else None)
+    except TypeError:
+        gs.init()
+    return gs
+
+
+def create_scene(cfg: dict[str, Any]):
+    """Create a Genesis scene from the YAML config."""
+    gs = _import_genesis()
+    sim_cfg = cfg.get("sim", {})
+    headless = bool(sim_cfg.get("headless", True))
+    sim_dt = sim_cfg.get("sim_dt")
+
+    try:
+        sim_options = gs.options.SimOptions(dt=sim_dt) if sim_dt is not None else None
+        scene_kwargs: dict[str, Any] = {"show_viewer": not headless}
+        if sim_options is not None:
+            scene_kwargs["sim_options"] = sim_options
+        return gs.Scene(**scene_kwargs)
+    except Exception as exc:
+        raise RuntimeError(
+            "TODO: Genesis Scene construction API needs verification for this "
+            "installed genesis-world version."
+        ) from exc
+
+
+def load_pi_plus(scene, cfg: dict[str, Any]):
+    """Load the pi_plus MJCF/URDF asset into a Genesis scene."""
+    gs = _import_genesis()
+    asset_file = cfg.get("robot", {}).get("asset_file")
+    if asset_file is None:
+        raise ValueError(
+            "robot.asset_file is null. Run `uv run python scripts/inspect_amp_tk.py`, "
+            "then fill configs/pi_plus_genesis.yaml with a ../AMP_TK/... asset path."
+        )
+    asset_path = ensure_exists(asset_file)
+    suffix = asset_path.suffix.lower()
+
+    try:
+        if suffix == ".xml":
+            morph = gs.morphs.MJCF(file=str(asset_path))
+        elif suffix == ".urdf":
+            morph = gs.morphs.URDF(file=str(asset_path))
+        else:
+            raise ValueError(f"Unsupported pi_plus asset type for Genesis load: {asset_path}")
+        return scene.add_entity(morph)
+    except Exception as exc:
+        raise RuntimeError(
+            "TODO: Verify Genesis robot loading API and MJCF mesh path handling. "
+            f"Attempted to load {asset_path}."
+        ) from exc
+
+
+def add_ground(scene, cfg: dict[str, Any]):
+    """Add a plane if enabled by config."""
+    if not cfg.get("scene", {}).get("ground", True):
+        return None
+    gs = _import_genesis()
+    try:
+        return scene.add_entity(gs.morphs.Plane())
+    except Exception as exc:
+        raise RuntimeError("TODO: Verify Genesis ground plane API.") from exc
+
+
+def add_ball(scene, cfg: dict[str, Any]):
+    """Add a lightweight soccer-size ball."""
+    gs = _import_genesis()
+    ball_cfg = cfg.get("ball", {})
+    radius = float(ball_cfg.get("radius", 0.05))
+    pos = ball_cfg.get("initial_pos", [0.18, -0.05, 0.05])
+    try:
+        return scene.add_entity(gs.morphs.Sphere(radius=radius, pos=pos))
+    except Exception as exc:
+        raise RuntimeError(
+            "TODO: Verify Genesis sphere API and mass/friction material settings."
+        ) from exc
+
+
+def step_scene(scene, n_steps: int):
+    """Step a Genesis scene n times."""
+    for _ in range(int(n_steps)):
+        try:
+            scene.step()
+        except Exception as exc:
+            raise RuntimeError("TODO: Verify Genesis scene stepping API.") from exc

@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.pyc
+runs/
+checkpoints/
+wandb/
+videos/
+exports/
+*.pt
+*.pth
+*.onnx
+*.ckpt
+.DS_Store
+
+# Build outputs
+build/
+dist/
+*.egg-info/
