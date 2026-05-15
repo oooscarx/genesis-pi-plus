@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import os
 from pathlib import Path
 import sys
 import types
@@ -40,7 +41,7 @@ def main() -> None:
     policy = load_policy(policy_path)
     policy.eval()
 
-    backend_name = args.backend or cfg.get("sim", {}).get("backend")
+    backend_name = args.backend or os.environ.get("GENESIS_BACKEND") or cfg.get("sim", {}).get("backend")
     init_genesis(headless=args.headless, backend=backend_name)
     policy_device = resolve_policy_device(args.policy_device, backend_name)
     policy = policy.to(policy_device)
