@@ -127,7 +127,7 @@ Before any real pi_plus deployment, add and test a safety layer with joint posit
 
 The kick training stack is scaffolded around Genesis and `rsl-rl-lib`. The policy action is a 20D residual joint-angle target added to a frozen baseline target. By default, `configs/pi_plus_kick_train.yaml` uses `baseline.mode: locomotion_policy` with `policies/model_40000.pt`; set it to `default_pose` only for debugging the residual controller without the locomotion actor.
 
-The default kick config is intentionally conservative: small residual action scale, low PPO exploration noise, and a strong fall penalty. If `episode/fall_rate` is high, keep this stability-first setup and do not increase `num_envs` or residual scale yet.
+The default kick config starts as an approach/contact curriculum: the ball is placed near the front-right foot, foot-ball proximity/contact rewards are strong, and target-distance rewards are weak. First make `metric/foot_ball_distance_m` decrease and `reward/ball_contact` become nonzero while keeping `episode/fall_rate` low; only then increase target/kick-speed rewards.
 
 ```bash
 uv sync --frozen

@@ -1,14 +1,14 @@
 scales:
-  ball_velocity_to_target: 4.0
-  ball_speed_match: 1.0
-  final_target_distance: 2.5
-  ball_contact: 2.0
-  foot_ball_proximity: 1.5
+  ball_velocity_to_target: 0.5
+  ball_speed_match: 0.1
+  final_target_distance: 0.2
+  ball_contact: 8.0
+  foot_ball_proximity: 8.0
   base_upright: 1.4
   base_height: 1.0
   support_stability: 0.8
-  action_rate: -0.05
-  action_magnitude: -0.02
+  action_rate: -0.02
+  action_magnitude: -0.002
   torque: -0.001
   joint_limit: -0.5
   fall: -25.0
