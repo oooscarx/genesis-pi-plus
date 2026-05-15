@@ -1,0 +1,30 @@
+enabled: true
+curriculum:
+  stage: 0
+  stage_threshold_success_rate: 0.65
+  stages:
+    - name: fixed_ball_fixed_target
+      randomize_ball: false
+      randomize_target: false
+      randomize_physics: false
+    - name: random_ball_small_angle
+      randomize_ball: true
+      randomize_target: true
+      target_angle_range_rad: [-0.35, 0.35]
+      randomize_physics: false
+    - name: random_ball_random_target
+      randomize_ball: true
+      randomize_target: true
+      randomize_physics: true
+noise:
+  imu_std: 0.01
+  joint_pos_std: 0.002
+  joint_vel_std: 0.02
+  ball_pos_std: 0.005
+latency:
+  action_delay_steps: [0, 2]
+physics:
+  ball_mass_scale: [0.8, 1.2]
+  ground_friction: [0.6, 1.4]
+  joint_kp_scale: [0.85, 1.15]
+  joint_kd_scale: [0.85, 1.15]

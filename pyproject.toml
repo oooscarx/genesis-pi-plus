@@ -11,6 +11,8 @@ dependencies = [
     "genesis-world",
     "numpy",
     "pyyaml",
+    "rsl-rl-lib==2.3.3",
+    "tensorboard",
     "torch",
     "tqdm",
 ]

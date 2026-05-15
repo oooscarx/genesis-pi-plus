@@ -2,7 +2,9 @@ robot:
   name: pi_plus
   asset_file: ../AMP_TK/legged_lab/assets/hightorque/pi_plus/pi_plus.xml
   base_link_name: base_link
-  foot_link_names: []  # TODO: confirm foot/contact link names in Genesis after load.
+  foot_link_names:
+    - l_ankle_roll_link
+    - r_ankle_roll_link
   joint_names:
     - l_hip_pitch_joint
     - l_hip_roll_joint

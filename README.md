@@ -1,6 +1,6 @@
 # genesis_pi_plus
 
-`genesis_pi_plus` is a standalone Git repository for migrating the `pi_plus` robot assets and control checks from `AMP_TK` / IsaacLab / MuJoCo into Genesis. Phase 1 is only for Genesis adaptation validation: no AMP training, no locomotion training, no PPO kick-ball implementation, and no Isaac Lab dependency.
+`genesis_pi_plus` is a standalone Git repository for migrating the `pi_plus` robot assets and control checks from `AMP_TK` / IsaacLab / MuJoCo into Genesis. The initial phase focused on Genesis adaptation validation. The current tree also includes a residual kick-training scaffold using Genesis and rsl-rl, still with no Isaac Lab dependency.
 
 The project references assets in `../AMP_TK/...` by relative path. It does not copy the original `AMP_TK` asset tree or exported model files.
 
@@ -105,3 +105,18 @@ Any field that cannot be verified should stay `null`, empty, or explicitly marke
 ## Safety Before Real Robot Deployment
 
 Before any real pi_plus deployment, add and test a safety layer with joint position limits, velocity limits, IMU roll/pitch protection, emergency stop, and a kickable-area check before kicking the ball.
+
+## Kick Training
+
+The kick training stack is scaffolded around Genesis and `rsl-rl-lib`. The policy action is a 20D residual joint-angle target added to the safe standing baseline.
+
+```bash
+uv sync --frozen
+uv run python scripts/train_pi_plus_kick.py --num-envs 1024 --backend cuda --device cuda
+uv run python scripts/test_pi_plus_kick_components.py
+uv run python scripts/eval_pi_plus_kick.py --checkpoint runs/pi_plus_kick/model_*.pt --num-envs 256
+uv run python scripts/play_pi_plus_kick.py --checkpoint runs/pi_plus_kick/model_*.pt --backend metal --device mps --viewer
+uv run python scripts/export_pi_plus_kick_policy.py --checkpoint runs/pi_plus_kick/model_*.pt --output exports/pi_plus_kick_policy.pt
+```
+
+Configuration lives in `configs/pi_plus_kick_train.yaml`, `configs/pi_plus_kick_rewards.yaml`, and `configs/pi_plus_domain_randomization.yaml`. RTX 5090 training hosts should use CUDA 12.8+ and a PyTorch build with Blackwell / `sm_120` support.

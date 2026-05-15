@@ -130,9 +130,19 @@ def add_ball(scene, cfg: dict[str, Any]):
     gs = _import_genesis()
     ball_cfg = cfg.get("ball", {})
     radius = float(ball_cfg.get("radius", 0.05))
+    mass = float(ball_cfg.get("mass", 0.043))
     pos = ball_cfg.get("initial_pos", [0.18, -0.05, 0.05])
     try:
-        return scene.add_entity(gs.morphs.Sphere(radius=radius, pos=pos))
+        volume = 4.0 / 3.0 * 3.141592653589793 * radius**3
+        material_kwargs = {"rho": mass / volume}
+        if ball_cfg.get("friction") is not None:
+            material_kwargs["friction"] = ball_cfg["friction"]
+        return scene.add_entity(
+            gs.morphs.Sphere(radius=radius, pos=tuple(pos)),
+            material=gs.materials.Rigid(**material_kwargs),
+            surface=gs.surfaces.Rough(color=(0.92, 0.38, 0.12, 1.0)),
+            name="ball",
+        )
     except Exception as exc:
         raise RuntimeError(
             "TODO: Verify Genesis sphere API and mass/friction material settings."
