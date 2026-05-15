@@ -137,3 +137,19 @@ uv run python scripts/export_pi_plus_kick_policy.py --checkpoint runs/pi_plus_ki
 ```
 
 Configuration lives in `configs/pi_plus_kick_train.yaml`, `configs/pi_plus_kick_rewards.yaml`, and `configs/pi_plus_domain_randomization.yaml`. RTX 5090 training hosts should use CUDA 12.8+ and a PyTorch build with Blackwell / `sm_120` support.
+
+### TensorBoard
+
+Training logs are written under the `--log-dir` path, for example `runs/pi_plus_kick_256`. On a remote training host:
+
+```bash
+uv run tensorboard --logdir runs --host 0.0.0.0 --port 6006
+```
+
+Then forward the port from your local machine:
+
+```bash
+ssh -L 6006:127.0.0.1:6006 root@<remote-host>
+```
+
+Open `http://127.0.0.1:6006` locally. If the cloud provider exposes a web terminal/proxy, you can also open port `6006` through that panel.
