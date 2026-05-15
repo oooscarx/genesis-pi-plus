@@ -40,6 +40,14 @@ uv run python scripts/test_pi_plus_pd_stand.py
 uv run python scripts/test_pi_plus_ball_contact.py
 ```
 
+To run the exported MuJoCo-validated locomotion policy in Genesis:
+
+```bash
+GENESIS_BACKEND=metal uv run python scripts/test_pi_plus_policy_walk.py --duration 5
+```
+
+The default policy path is `../AMP_TK/Exported_policy/model_40000.pt`. This is a rollout smoke test for migration validation, not training.
+
 ## GitHub Upload
 
 ```bash
