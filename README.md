@@ -59,9 +59,19 @@ git push -u origin main
 
 ## Headless Ubuntu Training Host
 
+Install system packages first:
+
+```bash
+apt update
+apt install -y git git-lfs curl build-essential cmake ninja-build \
+  libgl1 libglib2.0-0 libegl1 libegl-dev libsm6 libxext6 libxrender1
+git lfs install
+```
+
 ```bash
 git clone git@github.com:<your-org-or-user>/genesis_pi_plus.git
 cd genesis_pi_plus
+git lfs pull
 uv sync --frozen
 uv run python scripts/test_genesis_load_pi_plus.py
 ```

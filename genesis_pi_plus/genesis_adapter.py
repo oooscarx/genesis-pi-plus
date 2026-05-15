@@ -7,22 +7,37 @@ controller, observation, and task code.
 from __future__ import annotations
 
 import os
+import platform
 from typing import Any
 
 from .assets import ensure_exists
 
 
-def _import_genesis():
+def _configure_headless_import(headless: bool = True) -> None:
+    """Set renderer env vars before Genesis imports pyglet/pyrender."""
+    if not headless:
+        return
+    if platform.system() == "Linux":
+        os.environ.setdefault("GENESIS_HEADLESS", "1")
+        os.environ.setdefault("PYGLET_HEADLESS", "true")
+        os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
+
+
+def _import_genesis(headless: bool = True):
+    _configure_headless_import(headless)
     try:
         import genesis as gs  # type: ignore
     except ImportError as exc:
-        raise RuntimeError("Genesis is not installed. Run `uv sync` first.") from exc
+        raise RuntimeError(
+            "Failed to import Genesis. Run `uv sync` first; on headless Linux also "
+            "install libegl1/libgl1/libxrender1 and related OpenGL/X11 runtime libs."
+        ) from exc
     return gs
 
 
 def init_genesis(headless: bool = True, backend: str | None = None):
     """Initialize Genesis with a headless-safe default."""
-    gs = _import_genesis()
+    gs = _import_genesis(headless=headless)
     backend_name = (os.environ.get("GENESIS_BACKEND") or backend or "cuda").lower()
     backend_obj = _select_backend(gs, backend_name)
     try:
@@ -54,8 +69,8 @@ def _select_backend(gs: Any, backend_name: str):
 
 def create_scene(cfg: dict[str, Any]):
     """Create a Genesis scene from the YAML config."""
-    gs = _import_genesis()
     sim_cfg = cfg.get("sim", {})
+    gs = _import_genesis(headless=bool(sim_cfg.get("headless", True)))
     scene_cfg = cfg.get("scene", {})
     headless = bool(sim_cfg.get("headless", True))
     sim_dt = sim_cfg.get("sim_dt")
@@ -82,7 +97,7 @@ def create_scene(cfg: dict[str, Any]):
 
 def load_pi_plus(scene, cfg: dict[str, Any]):
     """Load the pi_plus MJCF/URDF asset into a Genesis scene."""
-    gs = _import_genesis()
+    gs = _import_genesis(headless=bool(cfg.get("sim", {}).get("headless", True)))
     asset_file = cfg.get("robot", {}).get("asset_file")
     if asset_file is None:
         raise ValueError(
@@ -112,7 +127,7 @@ def add_ground(scene, cfg: dict[str, Any]):
     scene_cfg = cfg.get("scene", {})
     if not scene_cfg.get("ground", True):
         return None
-    gs = _import_genesis()
+    gs = _import_genesis(headless=bool(cfg.get("sim", {}).get("headless", True)))
     try:
         ground = gs.morphs.Plane(
             plane_size=tuple(scene_cfg.get("ground_plane_size", [20.0, 20.0])),
@@ -127,7 +142,7 @@ def add_ground(scene, cfg: dict[str, Any]):
 
 def add_ball(scene, cfg: dict[str, Any]):
     """Add a lightweight soccer-size ball."""
-    gs = _import_genesis()
+    gs = _import_genesis(headless=bool(cfg.get("sim", {}).get("headless", True)))
     ball_cfg = cfg.get("ball", {})
     radius = float(ball_cfg.get("radius", 0.05))
     mass = float(ball_cfg.get("mass", 0.043))
