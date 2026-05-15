@@ -11,7 +11,7 @@ scales:
   action_magnitude: -0.002
   torque: -0.001
   joint_limit: -0.5
-  fall: -25.0
+  fall: -100.0
   not_kickable: -0.2
 thresholds:
   contact_distance_m: 0.09
