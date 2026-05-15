@@ -1,6 +1,6 @@
 robot:
   name: pi_plus
-  asset_file: ../AMP_TK/legged_lab/assets/hightorque/pi_plus/pi_plus.xml
+  asset_file: assets/pi_plus/pi_plus.xml
   base_link_name: base_link
   foot_link_names:
     - l_ankle_roll_link

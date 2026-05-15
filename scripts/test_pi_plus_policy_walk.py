@@ -12,11 +12,9 @@ import math
 import os
 from pathlib import Path
 import sys
-import types
 
 import numpy as np
 import torch
-from torch import nn
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -24,6 +22,7 @@ sys.path.insert(0, str(ROOT))
 from genesis_pi_plus.assets import ensure_exists
 from genesis_pi_plus.config import load_config
 from genesis_pi_plus.genesis_adapter import add_ground, create_scene, init_genesis, load_pi_plus
+from genesis_pi_plus.locomotion_policy import load_locomotion_policy, resolve_policy_device
 from genesis_pi_plus.pi_plus_model import PiPlusModelInfo
 
 MUJOCO_TO_ISAAC_IDX = [0, 6, 10, 16, 1, 7, 11, 17, 2, 8, 12, 18, 3, 9, 13, 19, 4, 14, 5, 15]
@@ -38,7 +37,7 @@ def main() -> None:
 
     info = PiPlusModelInfo.from_config(cfg)
     policy_path = ensure_exists(args.policy)
-    policy = load_policy(policy_path)
+    policy = load_locomotion_policy(policy_path)
     policy.eval()
 
     backend_name = args.backend or os.environ.get("GENESIS_BACKEND") or cfg.get("sim", {}).get("backend")
@@ -122,59 +121,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--headless", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--log-every", type=int, default=10)
     return parser.parse_args()
-
-
-def resolve_policy_device(policy_device: str, backend_name: str | None) -> torch.device:
-    if policy_device != "auto":
-        return torch.device(policy_device)
-    backend = (backend_name or "").lower()
-    if backend == "metal" and torch.backends.mps.is_available():
-        return torch.device("mps")
-    if backend in {"cuda", "gpu"} and torch.cuda.is_available():
-        return torch.device("cuda")
-    return torch.device("cpu")
-
-
-def load_policy(policy_path: Path) -> torch.nn.Module:
-    """Load either an exported TorchScript policy or an AMP_TK checkpoint."""
-    try:
-        return torch.jit.load(str(policy_path), map_location="cpu")
-    except RuntimeError as exc:
-        print(f"TorchScript load failed, trying AMP_TK checkpoint actor: {exc}")
-
-    install_amp_tk_import_shims()
-    checkpoint = torch.load(str(policy_path), map_location="cpu", weights_only=False)
-    if not isinstance(checkpoint, dict) or "model_state_dict" not in checkpoint:
-        raise RuntimeError(f"Unsupported policy file format: {policy_path}")
-    state_dict = checkpoint["model_state_dict"]
-    actor_state = {key.removeprefix("actor."): value for key, value in state_dict.items() if key.startswith("actor.")}
-    actor = nn.Sequential(
-        nn.Linear(345, 512),
-        nn.ELU(),
-        nn.Linear(512, 256),
-        nn.ELU(),
-        nn.Linear(256, 128),
-        nn.ELU(),
-        nn.Linear(128, 20),
-    )
-    actor.load_state_dict(actor_state)
-    print("Loaded AMP_TK checkpoint actor MLP [345, 512, 256, 128, 20].")
-    return actor
-
-
-def install_amp_tk_import_shims() -> None:
-    """Allow torch.load to unpickle AMP_TK checkpoint metadata without new deps."""
-    amp_root = ROOT / "../AMP_TK"
-    sys.path.insert(0, str((amp_root / "rsl_rl").resolve()))
-    sys.path.insert(0, str(amp_root.resolve()))
-    if "pybullet_utils" not in sys.modules:
-        pybullet_utils = types.ModuleType("pybullet_utils")
-        transformations = types.ModuleType("transformations")
-        pybullet_utils.transformations = transformations
-        sys.modules["pybullet_utils"] = pybullet_utils
-        sys.modules["pybullet_utils.transformations"] = transformations
-    if "git" not in sys.modules:
-        sys.modules["git"] = types.ModuleType("git")
 
 
 def dof_indices_by_joint_name(robot, joint_names: list[str]) -> list[int]:

@@ -102,7 +102,7 @@ def load_pi_plus(scene, cfg: dict[str, Any]):
     if asset_file is None:
         raise ValueError(
             "robot.asset_file is null. Run `uv run python scripts/inspect_amp_tk.py`, "
-            "then fill configs/pi_plus_genesis.yaml with a ../AMP_TK/... asset path."
+            "then fill configs/pi_plus_genesis.yaml with assets/pi_plus/pi_plus.xml or another asset path."
         )
     asset_path = ensure_exists(asset_file)
     suffix = asset_path.suffix.lower()

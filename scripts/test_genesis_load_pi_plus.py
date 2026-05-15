@@ -19,7 +19,7 @@ def main() -> None:
     if cfg.get("robot", {}).get("asset_file") is None:
         raise SystemExit(
             "robot.asset_file is null. Run `uv run python scripts/inspect_amp_tk.py` "
-            "and fill configs/pi_plus_genesis.yaml with a ../AMP_TK/... path."
+            "and fill configs/pi_plus_genesis.yaml with assets/pi_plus/pi_plus.xml or another asset path."
         )
 
     init_genesis(headless=True, backend=cfg.get("sim", {}).get("backend"))

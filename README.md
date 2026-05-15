@@ -2,7 +2,7 @@
 
 `genesis_pi_plus` is a standalone Git repository for migrating the `pi_plus` robot assets and control checks from `AMP_TK` / IsaacLab / MuJoCo into Genesis. The initial phase focused on Genesis adaptation validation. The current tree also includes a residual kick-training scaffold using Genesis and rsl-rl, still with no Isaac Lab dependency.
 
-The project references assets in `../AMP_TK/...` by relative path. It does not copy the original `AMP_TK` asset tree or exported model files.
+The Genesis runtime asset is self-contained under `assets/pi_plus/`, with STL meshes tracked through Git LFS. Normal load/train/play runs do not require an adjacent `AMP_TK` checkout.
 
 ## Local Setup on Mac
 
@@ -96,7 +96,14 @@ The default container command runs headless and does not open a viewer.
 
 ## Filling `configs/pi_plus_genesis.yaml`
 
-Start with:
+The default asset path is already vendored in this repository:
+
+```yaml
+robot:
+  asset_file: assets/pi_plus/pi_plus.xml
+```
+
+When refreshing from a newer AMP_TK release, start with:
 
 ```bash
 uv run python scripts/inspect_amp_tk.py
@@ -104,7 +111,7 @@ uv run python scripts/inspect_amp_tk.py
 
 Then open `reports/pi_plus_asset_report.md` and verify:
 
-- `robot.asset_file`: should point to a Genesis-loadable asset such as `../AMP_TK/legged_lab/assets/hightorque/pi_plus/pi_plus.xml` or the corresponding URDF.
+- `robot.asset_file`: should point to `assets/pi_plus/pi_plus.xml` unless you are deliberately testing an external vendor asset.
 - `robot.joint_names`: must match the action/control order used for Genesis targets.
 - `robot.default_joint_pos`, `robot.pd_kp`, `robot.pd_kd`, and `robot.action_scale`: currently seeded from `sim2sim_pi_plus.py`; re-check after Genesis joint introspection.
 - `robot.foot_link_names`: still TODO until foot/contact link names are verified in Genesis.
