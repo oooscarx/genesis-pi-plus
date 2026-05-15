@@ -24,7 +24,7 @@ def main() -> None:
     if not info.joint_names:
         raise SystemExit("robot.joint_names is empty; fill configs/pi_plus_genesis.yaml first.")
 
-    init_genesis(headless=True)
+    init_genesis(headless=True, backend=cfg.get("sim", {}).get("backend"))
     scene = create_scene(cfg)
     add_ground(scene, cfg)
     robot = load_pi_plus(scene, cfg)

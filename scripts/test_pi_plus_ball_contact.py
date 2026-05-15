@@ -18,7 +18,7 @@ def main() -> None:
     cfg = load_config(ROOT / "configs/pi_plus_genesis.yaml")
     cfg.setdefault("sim", {})["headless"] = True
 
-    init_genesis(headless=True)
+    init_genesis(headless=True, backend=cfg.get("sim", {}).get("backend"))
     scene = create_scene(cfg)
     add_ground(scene, cfg)
     robot = load_pi_plus(scene, cfg)

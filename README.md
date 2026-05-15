@@ -20,6 +20,12 @@ uv sync
 uv run python scripts/inspect_amp_tk.py
 ```
 
+On a Mac without CUDA, the scripts will fall back from `sim.backend: cuda` to CPU for smoke testing. You can also force a backend:
+
+```bash
+GENESIS_BACKEND=cpu uv run python scripts/test_genesis_load_pi_plus.py
+```
+
 For locked installs:
 
 ```bash

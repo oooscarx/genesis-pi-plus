@@ -6,6 +6,7 @@ controller, observation, and task code.
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from .assets import ensure_exists
@@ -19,16 +20,36 @@ def _import_genesis():
     return gs
 
 
-def init_genesis(headless: bool = True):
+def init_genesis(headless: bool = True, backend: str | None = None):
     """Initialize Genesis with a headless-safe default."""
     gs = _import_genesis()
-    # TODO: Verify the exact backend/headless knobs against the installed
-    # Genesis version on the CUDA training host.
+    backend_name = (os.environ.get("GENESIS_BACKEND") or backend or "cuda").lower()
+    backend_obj = _select_backend(gs, backend_name)
     try:
-        gs.init(backend=gs.cuda if hasattr(gs, "cuda") else None)
+        gs.init(backend=backend_obj)
     except TypeError:
         gs.init()
+    print(f"Genesis initialized with backend={backend_obj}.")
     return gs
+
+
+def _select_backend(gs: Any, backend_name: str):
+    """Resolve a Genesis backend name, with CUDA fallback for local Mac tests."""
+    if backend_name in {"cuda", "gpu"}:
+        try:
+            import torch
+
+            if not torch.cuda.is_available():
+                print("Requested Genesis CUDA backend, but torch.cuda is unavailable; falling back to CPU.")
+                backend_name = "cpu"
+        except ImportError:
+            print("Torch is unavailable while checking CUDA; falling back to CPU.")
+            backend_name = "cpu"
+
+    if not hasattr(gs, backend_name):
+        available = [name for name in ("cpu", "cuda", "gpu", "metal") if hasattr(gs, name)]
+        raise ValueError(f"Unsupported Genesis backend '{backend_name}'. Available: {available}")
+    return getattr(gs, backend_name)
 
 
 def create_scene(cfg: dict[str, Any]):
