@@ -13,7 +13,7 @@ scales:
   fall: -25.0
   not_kickable: -0.2
 thresholds:
-  contact_distance_m: 0.08
+  contact_distance_m: 0.09
   success_distance_m: 0.35
   base_height_target: 0.38
   base_height_sigma: 0.10

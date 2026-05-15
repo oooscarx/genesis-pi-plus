@@ -17,6 +17,15 @@ def quat_rotate_inverse_wxyz_torch(q: torch.Tensor, v: torch.Tensor) -> torch.Te
     return v - 2.0 * (w * uv + uuv)
 
 
+def quat_rotate_wxyz_torch(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+    """Rotate vectors by quaternions in wxyz format."""
+    q_vec = q[..., 1:4]
+    w = q[..., 0:1]
+    uv = torch.cross(q_vec, v, dim=-1)
+    uuv = torch.cross(q_vec, uv, dim=-1)
+    return v + 2.0 * (w * uv + uuv)
+
+
 def quat_wxyz_to_rpy_np(q: np.ndarray) -> tuple[float, float, float]:
     w, x, y, z = q
     sinr_cosp = 2 * (w * x + y * z)

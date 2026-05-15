@@ -13,7 +13,7 @@ from .config import load_config
 from .genesis_adapter import add_ball, add_ground, create_scene, init_genesis, load_pi_plus
 from .kick_rewards import KickRewardScales, compute_kick_rewards
 from .locomotion_policy import LocomotionBaseline, load_locomotion_policy, resolve_policy_device
-from .math_utils import normalize_xy, quat_rotate_inverse_wxyz_torch, quat_wxyz_to_rpy_torch, to_numpy
+from .math_utils import normalize_xy, quat_rotate_inverse_wxyz_torch, quat_rotate_wxyz_torch, quat_wxyz_to_rpy_torch, to_numpy
 from .pi_plus_model import PiPlusModelInfo
 from .safety import ResidualSafetyFilter, SafetyLimits
 
@@ -92,6 +92,7 @@ class PiPlusKickEnv:
         self.dof_idx: list[int] = list(range(self.num_actions))
         self.base_link_idx = BASE_LINK_LOCAL_IDX_FALLBACK
         self.foot_link_idx: list[int] = []
+        self.foot_contact_offsets = self._make_foot_contact_offsets()
         if build_scene:
             self._build_genesis(backend, headless)
             self.reset()
@@ -303,11 +304,28 @@ class PiPlusKickEnv:
             self.num_envs, len(self.foot_link_idx), 3
         )
 
+    def _get_foot_quat(self) -> torch.Tensor:
+        if self.robot is None or not self.foot_link_idx:
+            return torch.zeros(self.num_envs, 0, 4, device=self.device)
+        return _as_torch(self.robot.get_links_quat(self.foot_link_idx), self.device).reshape(
+            self.num_envs, len(self.foot_link_idx), 4
+        )
+
+    def _get_foot_contact_points(self) -> torch.Tensor:
+        foot_pos = self._get_foot_pos()
+        if foot_pos.shape[1] == 0:
+            return torch.zeros(self.num_envs, 0, 3, device=self.device)
+        foot_quat = self._get_foot_quat()
+        offsets = self.foot_contact_offsets[None, :, :, :].expand(self.num_envs, -1, -1, -1)
+        quats = foot_quat[:, :, None, :].expand(-1, -1, offsets.shape[2], -1)
+        rotated = quat_rotate_wxyz_torch(quats.reshape(-1, 4), offsets.reshape(-1, 3)).reshape_as(offsets)
+        return (foot_pos[:, :, None, :] + rotated).reshape(self.num_envs, -1, 3)
+
     def _ball_foot_contact(self) -> torch.Tensor:
-        feet = self._get_foot_pos()
-        if feet.shape[1] == 0:
+        foot_points = self._get_foot_contact_points()
+        if foot_points.shape[1] == 0:
             return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
-        distances = torch.linalg.norm(feet - self.ball_pos[:, None, :], dim=-1)
+        distances = torch.linalg.norm(foot_points - self.ball_pos[:, None, :], dim=-1)
         return torch.any(distances < float(self.reward_cfg["thresholds"]["contact_distance_m"]), dim=-1)
 
     def _control_torque(self, torque: torch.Tensor) -> None:
@@ -359,6 +377,26 @@ class PiPlusKickEnv:
             control_dt=self.control_dt,
             emergency_stop_file=safety.get("emergency_stop_file"),
         )
+
+    def _make_foot_contact_offsets(self) -> torch.Tensor:
+        robot_cfg = self.robot_cfg.get("robot", {})
+        foot_names = robot_cfg.get("foot_link_names", [])
+        configured = robot_cfg.get("foot_contact_points", {})
+        default_points = [
+            [0.02, -0.03, -0.02],
+            [0.02, 0.0, -0.02],
+            [0.02, 0.03, -0.02],
+            [0.06, -0.03, -0.02],
+            [0.06, 0.0, -0.02],
+            [0.06, 0.03, -0.02],
+            [0.10, -0.025, -0.02],
+            [0.10, 0.0, -0.02],
+            [0.10, 0.025, -0.02],
+        ]
+        per_foot = [configured.get(name, default_points) for name in foot_names]
+        if not per_foot:
+            per_foot = [default_points]
+        return torch.tensor(per_foot, dtype=torch.float32, device=self.device)
 
     def _make_locomotion_command(self) -> torch.Tensor:
         baseline = self.train_cfg.get("baseline", {})

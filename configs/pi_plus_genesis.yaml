@@ -5,6 +5,29 @@ robot:
   foot_link_names:
     - l_ankle_roll_link
     - r_ankle_roll_link
+  foot_contact_points:
+    # Local points on the front half of each foot link, used for early contact reward.
+    # TODO: replace/tune with Genesis collision contact pairs after validating the API.
+    l_ankle_roll_link:
+      - [0.02, -0.03, -0.02]
+      - [0.02, 0.0, -0.02]
+      - [0.02, 0.03, -0.02]
+      - [0.06, -0.03, -0.02]
+      - [0.06, 0.0, -0.02]
+      - [0.06, 0.03, -0.02]
+      - [0.10, -0.025, -0.02]
+      - [0.10, 0.0, -0.02]
+      - [0.10, 0.025, -0.02]
+    r_ankle_roll_link:
+      - [0.02, -0.03, -0.02]
+      - [0.02, 0.0, -0.02]
+      - [0.02, 0.03, -0.02]
+      - [0.06, -0.03, -0.02]
+      - [0.06, 0.0, -0.02]
+      - [0.06, 0.03, -0.02]
+      - [0.10, -0.025, -0.02]
+      - [0.10, 0.0, -0.02]
+      - [0.10, 0.025, -0.02]
   joint_names:
     - l_hip_pitch_joint
     - l_hip_roll_joint
