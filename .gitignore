@@ -7,6 +7,8 @@ wandb/
 videos/
 exports/
 *.pt
+!policies/
+!policies/*.pt
 *.pth
 *.onnx
 *.ckpt

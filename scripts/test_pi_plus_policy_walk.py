@@ -109,8 +109,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run model_40000.pt on pi_plus in Genesis.")
     parser.add_argument(
         "--policy",
-        default="../AMP_TK/Exported_policy/model_40000.pt",
-        help="TorchScript policy path, relative to genesis_pi_plus/ by default.",
+        default="policies/model_40000.pt",
+        help="TorchScript or AMP_TK checkpoint policy path, relative to genesis_pi_plus/ by default.",
     )
     parser.add_argument("--duration", type=float, default=5.0)
     parser.add_argument("--x-vel", type=float, default=0.8)
