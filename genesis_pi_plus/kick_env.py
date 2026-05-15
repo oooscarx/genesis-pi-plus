@@ -129,7 +129,7 @@ class PiPlusKickEnv:
         base_rpy = quat_wxyz_to_rpy_torch(base_quat)
         kickable = self._is_kickable(self.ball_pos)
         safe_delta, unclamped_delta = self.safety_filter.filter_action(
-            actions, self.prev_delta, dq, base_rpy, base_pos[:, 2], kickable
+            actions, self.prev_delta, dq, base_rpy, base_pos[:, 2], torch.ones_like(kickable, dtype=torch.bool)
         )
         self.actions = safe_delta
         self.prev_delta = safe_delta
@@ -151,7 +151,8 @@ class PiPlusKickEnv:
         fallen = self._fallen(base_pos, base_rpy)
         timeout = self.episode_length_buf >= self.max_episode_length
         done = fallen | timeout
-        contact = self._ball_foot_contact()
+        foot_ball_distance = self._foot_ball_distance()
+        contact = foot_ball_distance < float(self.reward_cfg["thresholds"]["contact_distance_m"])
 
         rewards, terms = compute_kick_rewards(
             scales=self.reward_scales,
@@ -165,6 +166,7 @@ class PiPlusKickEnv:
             prev_action=self.prev_actions,
             torque=self.last_torque,
             contact=contact,
+            foot_ball_distance=foot_ball_distance,
             kickable=kickable,
             fallen=fallen,
             control_dt=self.control_dt,
@@ -181,6 +183,7 @@ class PiPlusKickEnv:
             "time_outs": timeout,
             "log": {f"reward/{k}": v.mean().detach() for k, v in terms.items()},
         }
+        self.extras["log"]["metric/foot_ball_distance_m"] = foot_ball_distance.mean().detach()
         self.extras["log"]["episode/success_proxy"] = (torch.linalg.norm(self.ball_pos[:, :2] - self.target_pos, dim=-1) < float(self.reward_cfg["thresholds"]["success_distance_m"])).float().mean()
         self.extras["log"]["episode/fall_rate"] = fallen.float().mean()
         return obs, rewards, done, self.extras
@@ -321,12 +324,12 @@ class PiPlusKickEnv:
         rotated = quat_rotate_wxyz_torch(quats.reshape(-1, 4), offsets.reshape(-1, 3)).reshape_as(offsets)
         return (foot_pos[:, :, None, :] + rotated).reshape(self.num_envs, -1, 3)
 
-    def _ball_foot_contact(self) -> torch.Tensor:
+    def _foot_ball_distance(self) -> torch.Tensor:
         foot_points = self._get_foot_contact_points()
         if foot_points.shape[1] == 0:
-            return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+            return torch.full((self.num_envs,), 1.0e6, dtype=torch.float32, device=self.device)
         distances = torch.linalg.norm(foot_points - self.ball_pos[:, None, :], dim=-1)
-        return torch.any(distances < float(self.reward_cfg["thresholds"]["contact_distance_m"]), dim=-1)
+        return torch.min(distances, dim=-1).values
 
     def _control_torque(self, torque: torch.Tensor) -> None:
         if self.robot is not None:

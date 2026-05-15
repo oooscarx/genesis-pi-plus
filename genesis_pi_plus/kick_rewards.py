@@ -15,6 +15,7 @@ class KickRewardScales:
     ball_speed_match: float
     final_target_distance: float
     ball_contact: float
+    foot_ball_proximity: float
     base_upright: float
     base_height: float
     support_stability: float
@@ -39,6 +40,7 @@ def compute_kick_rewards(
     prev_action: torch.Tensor,
     torque: torch.Tensor,
     contact: torch.Tensor,
+    foot_ball_distance: torch.Tensor,
     kickable: torch.Tensor,
     fallen: torch.Tensor,
     control_dt: float,
@@ -56,6 +58,7 @@ def compute_kick_rewards(
         "ball_speed_match": torch.exp(-torch.square(speed_mag - desired_ball_speed)),
         "final_target_distance": torch.exp(-torch.linalg.norm(target_vec, dim=-1)),
         "ball_contact": contact.float(),
+        "foot_ball_proximity": torch.exp(-torch.square(foot_ball_distance / 0.12)),
         "base_upright": torch.exp(-3.0 * torch.sum(torch.square(base_rpy[:, :2]), dim=-1)),
         "base_height": torch.exp(-torch.square(base_height - base_height_target) / max(base_height_sigma**2, 1.0e-6)),
         "support_stability": torch.exp(-torch.linalg.norm(base_rpy[:, :2], dim=-1)),

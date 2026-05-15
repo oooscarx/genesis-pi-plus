@@ -2,7 +2,8 @@ scales:
   ball_velocity_to_target: 4.0
   ball_speed_match: 1.0
   final_target_distance: 2.5
-  ball_contact: 0.75
+  ball_contact: 2.0
+  foot_ball_proximity: 1.5
   base_upright: 1.4
   base_height: 1.0
   support_stability: 0.8
