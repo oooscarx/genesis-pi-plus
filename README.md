@@ -108,7 +108,7 @@ Before any real pi_plus deployment, add and test a safety layer with joint posit
 
 ## Kick Training
 
-The kick training stack is scaffolded around Genesis and `rsl-rl-lib`. The policy action is a 20D residual joint-angle target added to the safe standing baseline.
+The kick training stack is scaffolded around Genesis and `rsl-rl-lib`. The policy action is a 20D residual joint-angle target added to a frozen baseline target. By default, `configs/pi_plus_kick_train.yaml` uses `baseline.mode: locomotion_policy` with `policies/model_40000.pt`; set it to `default_pose` only for debugging the residual controller without the locomotion actor.
 
 ```bash
 uv sync --frozen

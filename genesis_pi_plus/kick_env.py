@@ -12,6 +12,7 @@ import torch
 from .config import load_config
 from .genesis_adapter import add_ball, add_ground, create_scene, init_genesis, load_pi_plus
 from .kick_rewards import KickRewardScales, compute_kick_rewards
+from .locomotion_policy import LocomotionBaseline, load_locomotion_policy, resolve_policy_device
 from .math_utils import normalize_xy, quat_rotate_inverse_wxyz_torch, quat_wxyz_to_rpy_torch, to_numpy
 from .pi_plus_model import PiPlusModelInfo
 from .safety import ResidualSafetyFilter, SafetyLimits
@@ -73,6 +74,8 @@ class PiPlusKickEnv:
         self.prev_actions = torch.zeros_like(self.actions)
         self.prev_delta = torch.zeros_like(self.actions)
         self.last_torque = torch.zeros_like(self.actions)
+        self.locomotion_command = self._make_locomotion_command()
+        self.baseline: LocomotionBaseline | None = self._make_baseline(backend)
         self.ball_pos = torch.zeros(self.num_envs, 3, device=self.device)
         self.prev_ball_pos = torch.zeros_like(self.ball_pos)
         self.target_pos = torch.zeros(self.num_envs, 2, device=self.device)
@@ -130,7 +133,8 @@ class PiPlusKickEnv:
         self.actions = safe_delta
         self.prev_delta = safe_delta
 
-        target = self.default_pos + safe_delta
+        baseline_target = self._baseline_target(q, dq, base_quat)
+        target = baseline_target + safe_delta
         for _ in range(self.decimation):
             q, dq = self._get_joint_state()
             torque = torch.clamp((target - q) * self.kp - dq * self.kd, -self.max_torque, self.max_torque)
@@ -200,6 +204,8 @@ class PiPlusKickEnv:
         self.prev_actions[env_ids] = 0.0
         self.prev_delta[env_ids] = 0.0
         self.last_torque[env_ids] = 0.0
+        if self.baseline is not None:
+            self.baseline.reset(self.num_envs, env_ids)
         self._sample_task(env_ids)
         if self.robot is not None:
             self._set_dofs_position(self.default_pos[env_ids], env_ids)
@@ -352,6 +358,43 @@ class PiPlusKickEnv:
             max_base_height=float(safety["max_base_height"]),
             control_dt=self.control_dt,
             emergency_stop_file=safety.get("emergency_stop_file"),
+        )
+
+    def _make_locomotion_command(self) -> torch.Tensor:
+        baseline = self.train_cfg.get("baseline", {})
+        command = baseline.get("command", [0.0, 0.0, 0.0])
+        if len(command) != 3:
+            raise ValueError("baseline.command must be [x_vel, y_vel, yaw_vel].")
+        return torch.tensor(command, dtype=torch.float32, device=self.device).repeat(self.num_envs, 1)
+
+    def _make_baseline(self, backend: str | None) -> LocomotionBaseline | None:
+        baseline_cfg = self.train_cfg.get("baseline", {})
+        mode = baseline_cfg.get("mode", "default_pose")
+        if mode == "default_pose":
+            return None
+        if mode != "locomotion_policy":
+            raise ValueError(f"Unsupported baseline.mode: {mode}")
+        policy_path = baseline_cfg.get("policy_path")
+        if not policy_path:
+            raise ValueError("baseline.policy_path is required when baseline.mode is locomotion_policy.")
+        policy_device = resolve_policy_device(str(baseline_cfg.get("policy_device", "auto")), backend or self.robot_cfg.get("sim", {}).get("backend"))
+        policy = load_locomotion_policy(policy_path, policy_device)
+        action_scale = float(baseline_cfg.get("action_scale", self.robot_cfg.get("robot", {}).get("action_scale", {}).get("default", 0.25)))
+        baseline = LocomotionBaseline(policy=policy, device=policy_device, action_scale=action_scale)
+        baseline.reset(self.num_envs)
+        return baseline
+
+    def _baseline_target(self, q: torch.Tensor, dq: torch.Tensor, base_quat: torch.Tensor) -> torch.Tensor:
+        if self.baseline is None:
+            return self.default_pos
+        base_ang_vel = self._get_base_ang_vel()
+        return self.baseline.target(
+            q_mujoco=q,
+            dq_mujoco=dq,
+            default_pos=self.default_pos,
+            base_quat_wxyz=base_quat,
+            base_ang_vel_world=base_ang_vel,
+            command=self.locomotion_command,
         )
 
     def _dof_indices_by_joint_name(self) -> list[int]:

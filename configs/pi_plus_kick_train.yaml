@@ -4,8 +4,11 @@ num_envs: 1024
 env_spacing: [2.0, 2.0]
 episode_length_s: 2.5
 baseline:
-  mode: default_pose
+  mode: locomotion_policy
   policy_path: policies/model_40000.pt
+  policy_device: auto
+  action_scale: 0.25
+  command: [0.0, 0.0, 0.0]
 control:
   action_dim: 20
   action_scale_default: 0.18
