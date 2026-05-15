@@ -20,9 +20,9 @@ control:
   max_torque_leg: 20.0
   max_torque_arm: 10.0
 task:
-  ball_initial_pos: [0.18, -0.05, 0.05]
+  ball_initial_pos: [0.20, -0.05, 0.065]
   ball_pos_range:
-    x: [0.12, 0.28]
+    x: [0.14, 0.32]
     y: [-0.12, 0.12]
   target_mode: vector
   target_pos_robot: [1.8, 0.0]

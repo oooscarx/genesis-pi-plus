@@ -107,9 +107,9 @@ scene:
   viewer_camera_lookat: [0.15, 0.0, 0.35]
   viewer_camera_fov: 45
 ball:
-  radius: 0.05
-  mass: 0.043
-  initial_pos: [0.18, -0.05, 0.05]
+  radius: 0.065
+  mass: 0.15
+  initial_pos: [0.20, -0.05, 0.065]
   friction: null
 test:
   stand_seconds: 5.0
