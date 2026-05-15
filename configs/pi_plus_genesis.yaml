@@ -97,6 +97,13 @@ sim:
   control_dt: 0.02
 scene:
   ground: true
+  ground_plane_size: [20.0, 20.0]
+  ground_tile_size: [0.25, 0.25]
+  ground_color: [0.58, 0.62, 0.60, 1.0]
+  ground_friction: 1.0
+  viewer_camera_pos: [2.2, -2.2, 1.4]
+  viewer_camera_lookat: [0.15, 0.0, 0.35]
+  viewer_camera_fov: 45
 ball:
   radius: 0.05
   mass: 0.043

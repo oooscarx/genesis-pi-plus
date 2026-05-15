@@ -56,6 +56,7 @@ def create_scene(cfg: dict[str, Any]):
     """Create a Genesis scene from the YAML config."""
     gs = _import_genesis()
     sim_cfg = cfg.get("sim", {})
+    scene_cfg = cfg.get("scene", {})
     headless = bool(sim_cfg.get("headless", True))
     sim_dt = sim_cfg.get("sim_dt")
 
@@ -64,6 +65,13 @@ def create_scene(cfg: dict[str, Any]):
         scene_kwargs: dict[str, Any] = {"show_viewer": not headless}
         if sim_options is not None:
             scene_kwargs["sim_options"] = sim_options
+        if not headless:
+            scene_kwargs["viewer_options"] = gs.options.ViewerOptions(
+                camera_pos=tuple(scene_cfg.get("viewer_camera_pos", [2.2, -2.2, 1.4])),
+                camera_lookat=tuple(scene_cfg.get("viewer_camera_lookat", [0.15, 0.0, 0.35])),
+                camera_fov=float(scene_cfg.get("viewer_camera_fov", 45)),
+                max_FPS=60,
+            )
         return gs.Scene(**scene_kwargs)
     except Exception as exc:
         raise RuntimeError(
@@ -101,11 +109,18 @@ def load_pi_plus(scene, cfg: dict[str, Any]):
 
 def add_ground(scene, cfg: dict[str, Any]):
     """Add a plane if enabled by config."""
-    if not cfg.get("scene", {}).get("ground", True):
+    scene_cfg = cfg.get("scene", {})
+    if not scene_cfg.get("ground", True):
         return None
     gs = _import_genesis()
     try:
-        return scene.add_entity(gs.morphs.Plane())
+        ground = gs.morphs.Plane(
+            plane_size=tuple(scene_cfg.get("ground_plane_size", [20.0, 20.0])),
+            tile_size=tuple(scene_cfg.get("ground_tile_size", [0.25, 0.25])),
+        )
+        material = gs.materials.Rigid(friction=scene_cfg.get("ground_friction", 1.0))
+        surface = gs.surfaces.Rough(color=tuple(scene_cfg.get("ground_color", [0.58, 0.62, 0.60, 1.0])))
+        return scene.add_entity(ground, material=material, surface=surface, name="ground")
     except Exception as exc:
         raise RuntimeError("TODO: Verify Genesis ground plane API.") from exc
 

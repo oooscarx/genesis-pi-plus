@@ -48,6 +48,8 @@ GENESIS_BACKEND=metal uv run python scripts/test_pi_plus_policy_walk.py --durati
 
 The default policy path is `policies/model_40000.pt`, tracked with Git LFS. This is a rollout smoke test for migration validation, not training.
 
+The viewer ground plane color, tile size, and camera are configured in `configs/pi_plus_genesis.yaml` under `scene`.
+
 ## GitHub Upload
 
 ```bash
