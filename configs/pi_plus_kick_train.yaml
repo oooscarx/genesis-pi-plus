@@ -11,12 +11,12 @@ baseline:
   command: [0.0, 0.0, 0.0]
 control:
   action_dim: 20
-  action_scale_default: 0.18
-  leg_action_scale: 0.22
-  arm_action_scale: 0.06
-  max_delta_rad: 0.35
-  max_delta_rate_rad_per_s: 7.0
-  max_joint_velocity_rad_per_s: 18.0
+  action_scale_default: 0.06
+  leg_action_scale: 0.08
+  arm_action_scale: 0.02
+  max_delta_rad: 0.12
+  max_delta_rate_rad_per_s: 2.5
+  max_joint_velocity_rad_per_s: 12.0
   max_torque_leg: 20.0
   max_torque_arm: 10.0
 task:
@@ -46,7 +46,7 @@ rsl_rl:
   empirical_normalization: false
   policy:
     class_name: ActorCritic
-    init_noise_std: 0.6
+    init_noise_std: 0.18
     noise_std_type: scalar
     actor_hidden_dims: [256, 256, 128]
     critic_hidden_dims: [256, 256, 128]
@@ -56,10 +56,10 @@ rsl_rl:
     value_loss_coef: 1.0
     use_clipped_value_loss: true
     clip_param: 0.2
-    entropy_coef: 0.002
+    entropy_coef: 0.0005
     num_learning_epochs: 5
     num_mini_batches: 4
-    learning_rate: 0.0005
+    learning_rate: 0.0003
     schedule: adaptive
     gamma: 0.99
     lam: 0.95

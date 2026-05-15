@@ -3,15 +3,15 @@ scales:
   ball_speed_match: 1.0
   final_target_distance: 2.5
   ball_contact: 0.75
-  base_upright: 0.8
-  base_height: 0.5
-  support_stability: 0.4
-  action_rate: -0.02
-  action_magnitude: -0.005
-  torque: -0.0005
+  base_upright: 1.4
+  base_height: 1.0
+  support_stability: 0.8
+  action_rate: -0.05
+  action_magnitude: -0.02
+  torque: -0.001
   joint_limit: -0.5
-  fall: -8.0
-  not_kickable: -1.0
+  fall: -25.0
+  not_kickable: -0.2
 thresholds:
   contact_distance_m: 0.08
   success_distance_m: 0.35
