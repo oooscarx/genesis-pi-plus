@@ -355,9 +355,12 @@ class PiPlusKickEnv:
 
     def _make_action_scale(self) -> torch.Tensor:
         control = self.train_cfg["control"]
+        per_joint = control.get("joint_action_scale", {})
         values = []
         for name in self.joint_names:
-            if "shoulder" in name or "upper_arm" in name or "elbow" in name:
+            if name in per_joint:
+                values.append(float(per_joint[name]))
+            elif "shoulder" in name or "upper_arm" in name or "elbow" in name:
                 values.append(float(control["arm_action_scale"]))
             elif "hip" in name or "thigh" in name or "calf" in name or "ankle" in name:
                 values.append(float(control["leg_action_scale"]))

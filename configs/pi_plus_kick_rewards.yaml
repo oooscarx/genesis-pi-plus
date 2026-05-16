@@ -10,9 +10,9 @@ scales:
   base_upright: 1.4
   base_height: 1.0
   support_stability: 0.8
-  action_rate: -0.02
-  action_magnitude: -0.002
-  torque: -0.001
+  action_rate: -0.05
+  action_magnitude: -0.01
+  torque: -0.002
   joint_limit: -0.5
   fall: -100.0
   not_kickable: -0.2
