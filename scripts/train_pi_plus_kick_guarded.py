@@ -52,12 +52,19 @@ def main() -> None:
         completed += chunk
 
         metrics = evaluate_runner_policy(runner, env, args.eval_steps)
-        score = metrics["ball_contact_mean"] * 5.0 - metrics["foot_ball_distance_m_mean"] - metrics["fall_rate_mean"] * 10.0
+        pre_contact_weight = 1.0 - metrics["has_contacted_ball_rate_mean"]
+        score = (
+            metrics["contact_rate_mean"] * 5.0
+            + metrics["has_contacted_ball_rate_mean"] * 5.0
+            - metrics["foot_ball_distance_m_mean"] * pre_contact_weight
+            - metrics["fall_rate_mean"] * 10.0
+        )
         print(
             "[guard] "
             f"iter={completed} score={score:.4f} "
             f"fall_rate_mean={metrics['fall_rate_mean']:.4f} "
-            f"contact_mean={metrics['ball_contact_mean']:.4f} "
+            f"contact_mean={metrics['contact_rate_mean']:.4f} "
+            f"has_contacted_mean={metrics['has_contacted_ball_rate_mean']:.4f} "
             f"foot_ball_distance_m={metrics['foot_ball_distance_m_mean']:.4f}"
         )
 
@@ -70,9 +77,14 @@ def main() -> None:
         if metrics["fall_rate_mean"] > args.max_fall_rate:
             print(f"[guard] stopping: fall_rate_mean {metrics['fall_rate_mean']:.4f} > {args.max_fall_rate:.4f}")
             break
-        if metrics["foot_ball_distance_m_mean"] > args.max_foot_ball_distance:
+        if (
+            metrics["has_contacted_ball_rate_mean"] < args.min_contact_rate_to_ignore_distance
+            and metrics["foot_ball_distance_m_mean"] > args.max_foot_ball_distance
+        ):
             print(
                 "[guard] stopping: "
+                f"has_contacted_mean {metrics['has_contacted_ball_rate_mean']:.4f} < "
+                f"{args.min_contact_rate_to_ignore_distance:.4f} and "
                 f"foot_ball_distance_m {metrics['foot_ball_distance_m_mean']:.4f} > {args.max_foot_ball_distance:.4f}"
             )
             break
@@ -84,6 +96,7 @@ def evaluate_runner_policy(runner, env: PiPlusKickEnv, n_steps: int) -> dict[str
     obs, _ = env.reset()
     fall_sum = torch.zeros((), device=env.device)
     contact_sum = torch.zeros((), device=env.device)
+    has_contacted_sum = torch.zeros((), device=env.device)
     distance_sum = torch.zeros((), device=env.device)
     reward_sum = torch.zeros((), device=env.device)
     for _ in range(n_steps):
@@ -92,7 +105,8 @@ def evaluate_runner_policy(runner, env: PiPlusKickEnv, n_steps: int) -> dict[str
         obs, rewards, _done, extras = env.step(actions)
         reward_sum += rewards.mean()
         fall_sum += extras["log"].get("episode/fall_rate", torch.zeros((), device=env.device))
-        contact_sum += extras["log"].get("reward/ball_contact", torch.zeros((), device=env.device))
+        contact_sum += extras["log"].get("episode/contact_rate", torch.zeros((), device=env.device))
+        has_contacted_sum += extras["log"].get("episode/has_contacted_ball_rate", torch.zeros((), device=env.device))
         distance_sum += extras["log"].get("metric/foot_ball_distance_m", torch.zeros((), device=env.device))
     runner.train_mode()
     materialize_env_buffers(env)
@@ -100,7 +114,8 @@ def evaluate_runner_policy(runner, env: PiPlusKickEnv, n_steps: int) -> dict[str
     return {
         "mean_reward": float(reward_sum / denom),
         "fall_rate_mean": float(fall_sum / denom),
-        "ball_contact_mean": float(contact_sum / denom),
+        "contact_rate_mean": float(contact_sum / denom),
+        "has_contacted_ball_rate_mean": float(has_contacted_sum / denom),
         "foot_ball_distance_m_mean": float(distance_sum / denom),
     }
 
@@ -114,6 +129,7 @@ def materialize_env_buffers(env: PiPlusKickEnv) -> None:
         "last_torque",
         "ball_pos",
         "prev_ball_pos",
+        "has_contacted_ball",
         "target_pos",
         "desired_ball_speed",
         "episode_length_buf",
@@ -137,6 +153,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eval-steps", type=int, default=125)
     parser.add_argument("--max-fall-rate", type=float, default=0.15)
     parser.add_argument("--max-foot-ball-distance", type=float, default=0.6)
+    parser.add_argument("--min-contact-rate-to-ignore-distance", type=float, default=0.05)
     parser.add_argument("--backend", default=None)
     parser.add_argument("--device", default=None)
     parser.add_argument("--log-dir", default="runs/pi_plus_kick_guarded")

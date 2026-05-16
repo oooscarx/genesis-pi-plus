@@ -31,6 +31,7 @@ def main() -> None:
     reward_sum = torch.zeros(env.num_envs, device=env.device)
     done_count = torch.zeros(env.num_envs, device=env.device)
     contact_sum = torch.zeros((), device=env.device)
+    has_contacted_sum = torch.zeros((), device=env.device)
     distance_sum = torch.zeros((), device=env.device)
     fall_sum = torch.zeros((), device=env.device)
     n_steps = int(args.duration / env.control_dt)
@@ -40,7 +41,8 @@ def main() -> None:
         obs, reward, done, extras = env.step(action)
         reward_sum += reward
         done_count += done.float()
-        contact_sum += extras["log"].get("reward/ball_contact", torch.zeros((), device=env.device))
+        contact_sum += extras["log"].get("episode/contact_rate", torch.zeros((), device=env.device))
+        has_contacted_sum += extras["log"].get("episode/has_contacted_ball_rate", torch.zeros((), device=env.device))
         distance_sum += extras["log"].get("metric/foot_ball_distance_m", torch.zeros((), device=env.device))
         fall_sum += extras["log"].get("episode/fall_rate", torch.zeros((), device=env.device))
     success = extras["log"].get("episode/success_proxy")
@@ -50,7 +52,8 @@ def main() -> None:
     print(f"success_proxy={float(success):.4f}")
     print(f"fall_rate={float(fall_rate):.4f}")
     print(f"fall_rate_mean={float(fall_sum / max(n_steps, 1)):.4f}")
-    print(f"ball_contact_mean={float(contact_sum / max(n_steps, 1)):.4f}")
+    print(f"contact_rate_mean={float(contact_sum / max(n_steps, 1)):.4f}")
+    print(f"has_contacted_ball_rate_mean={float(has_contacted_sum / max(n_steps, 1)):.4f}")
     print(f"foot_ball_distance_m_mean={float(distance_sum / max(n_steps, 1)):.4f}")
 
 

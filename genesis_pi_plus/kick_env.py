@@ -78,6 +78,7 @@ class PiPlusKickEnv:
         self.baseline: LocomotionBaseline | None = self._make_baseline(backend)
         self.ball_pos = torch.zeros(self.num_envs, 3, device=self.device)
         self.prev_ball_pos = torch.zeros_like(self.ball_pos)
+        self.has_contacted_ball = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self.target_pos = torch.zeros(self.num_envs, 2, device=self.device)
         self.desired_ball_speed = torch.zeros(self.num_envs, device=self.device)
         self.extras: dict[str, Any] = {"observations": {}, "log": {}}
@@ -152,9 +153,13 @@ class PiPlusKickEnv:
         fallen = self._fallen(base_pos, base_rpy)
         timeout = self.episode_length_buf >= self.max_episode_length
         foot_ball_distance = self._foot_ball_distance()
-        ball_escaped = foot_ball_distance > float(self.reward_cfg["thresholds"]["ball_escape_distance_m"])
-        done = fallen | timeout | ball_escaped
         contact = foot_ball_distance < float(self.reward_cfg["thresholds"]["contact_distance_m"])
+        self.has_contacted_ball = self.has_contacted_ball | contact
+        has_contacted_ball = self.has_contacted_ball.clone()
+        ball_escaped = (~self.has_contacted_ball) & (
+            foot_ball_distance > float(self.reward_cfg["thresholds"]["ball_escape_distance_m"])
+        )
+        done = fallen | timeout | ball_escaped
 
         rewards, terms = compute_kick_rewards(
             scales=self.reward_scales,
@@ -168,6 +173,7 @@ class PiPlusKickEnv:
             prev_action=self.prev_actions,
             torque=self.last_torque,
             contact=contact,
+            has_contacted_ball=has_contacted_ball,
             foot_ball_distance=foot_ball_distance,
             prev_foot_ball_distance=prev_foot_ball_distance,
             kickable=kickable,
@@ -189,8 +195,10 @@ class PiPlusKickEnv:
         self.extras["log"]["metric/foot_ball_distance_m"] = foot_ball_distance.mean().detach()
         self.extras["log"]["metric/foot_ball_delta_m"] = (prev_foot_ball_distance - foot_ball_distance).mean().detach()
         self.extras["log"]["episode/success_proxy"] = (torch.linalg.norm(self.ball_pos[:, :2] - self.target_pos, dim=-1) < float(self.reward_cfg["thresholds"]["success_distance_m"])).float().mean()
+        self.extras["log"]["episode/contact_rate"] = contact.float().mean()
         self.extras["log"]["episode/fall_rate"] = fallen.float().mean()
         self.extras["log"]["episode/ball_escape_rate"] = ball_escaped.float().mean()
+        self.extras["log"]["episode/has_contacted_ball_rate"] = has_contacted_ball.float().mean()
         return obs, rewards, done, self.extras
 
     def _build_genesis(self, backend: str | None, headless: bool) -> None:
@@ -213,6 +221,7 @@ class PiPlusKickEnv:
         self.prev_actions[env_ids] = 0.0
         self.prev_delta[env_ids] = 0.0
         self.last_torque[env_ids] = 0.0
+        self.has_contacted_ball[env_ids] = False
         if self.baseline is not None:
             self.baseline.reset(self.num_envs, env_ids)
         self._sample_task(env_ids)
