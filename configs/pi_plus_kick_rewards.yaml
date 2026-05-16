@@ -17,7 +17,7 @@ scales:
   fall: -100.0
   not_kickable: -0.2
 thresholds:
-  contact_distance_m: 0.09
+  contact_distance_m: 0.08
   ball_escape_distance_m: 0.45
   success_distance_m: 0.35
   base_height_target: 0.38
