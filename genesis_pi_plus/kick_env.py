@@ -137,6 +137,7 @@ class PiPlusKickEnv:
         safe_delta, unclamped_delta = self.safety_filter.filter_action(
             actions, self.prev_delta, dq, base_rpy, base_pos[:, 2], torch.ones_like(kickable, dtype=torch.bool)
         )
+        safe_delta = self._apply_kick_window(safe_delta)
         self.actions = safe_delta
         self.prev_delta = safe_delta
 
@@ -203,6 +204,7 @@ class PiPlusKickEnv:
         self.extras["log"]["episode/fall_rate"] = fallen.float().mean()
         self.extras["log"]["episode/ball_escape_rate"] = ball_escaped.float().mean()
         self.extras["log"]["episode/has_contacted_ball_rate"] = has_contacted_ball.float().mean()
+        self.extras["log"]["metric/kick_window_active"] = self._kick_window_active().float().mean().detach()
         return obs, rewards, done, self.extras
 
     def _build_genesis(self, backend: str | None, headless: bool) -> None:
@@ -375,6 +377,16 @@ class PiPlusKickEnv:
         xr = task["kickable_x_range"]
         y_abs = float(task["kickable_y_abs_max"])
         return (ball_pos[:, 0] >= xr[0]) & (ball_pos[:, 0] <= xr[1]) & (torch.abs(ball_pos[:, 1]) <= y_abs)
+
+    def _apply_kick_window(self, delta: torch.Tensor) -> torch.Tensor:
+        active = self._kick_window_active().float()[:, None]
+        return delta * active
+
+    def _kick_window_active(self) -> torch.Tensor:
+        task = self.train_cfg.get("task", {})
+        start_step = int(float(task.get("kick_start_s", 0.0)) / self.control_dt)
+        end_step = int(float(task.get("kick_end_s", self.max_episode_length * self.control_dt)) / self.control_dt)
+        return (self.episode_length_buf >= start_step) & (self.episode_length_buf < end_step)
 
     def _make_action_scale(self) -> torch.Tensor:
         control = self.train_cfg["control"]
