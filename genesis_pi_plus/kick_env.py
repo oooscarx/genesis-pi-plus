@@ -49,6 +49,7 @@ class PiPlusKickEnv:
         self.reward_cfg = load_config(paths.reward_cfg)
         self.domain_rand_cfg = load_config(paths.domain_rand_cfg)
         self.cfg = {"robot": self.robot_cfg, "train": self.train_cfg, "reward": self.reward_cfg, "domain_randomization": self.domain_rand_cfg}
+        self.headless = headless
 
         self.num_envs = int(num_envs or self.train_cfg.get("num_envs", 1))
         self.device = torch.device(device or _resolve_torch_device(self.train_cfg.get("device", "cuda")))
@@ -144,7 +145,7 @@ class PiPlusKickEnv:
             self._control_torque(torque)
             self.last_torque = torque
             if self.scene is not None:
-                self.scene.step(update_visualizer=False, refresh_visualizer=False)
+                self.scene.step(update_visualizer=not self.headless, refresh_visualizer=not self.headless)
 
         self.episode_length_buf += 1
         self.ball_pos = self._get_ball_pos()
