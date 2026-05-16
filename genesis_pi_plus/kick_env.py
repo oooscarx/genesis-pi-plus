@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 import torch
 
+from .contacts import get_foot_ball_contacts
 from .config import load_config
 from .genesis_adapter import add_ball, add_ground, create_scene, init_genesis, load_pi_plus
 from .kick_rewards import KickRewardScales, compute_kick_rewards
@@ -94,6 +95,7 @@ class PiPlusKickEnv:
         self.dof_idx: list[int] = list(range(self.num_actions))
         self.base_link_idx = BASE_LINK_LOCAL_IDX_FALLBACK
         self.foot_link_idx: list[int] = []
+        self.foot_link_global_idx: list[int] = []
         self.foot_contact_offsets = self._make_foot_contact_offsets()
         if build_scene:
             self._build_genesis(backend, headless)
@@ -154,7 +156,7 @@ class PiPlusKickEnv:
         fallen = self._fallen(base_pos, base_rpy)
         timeout = self.episode_length_buf >= self.max_episode_length
         foot_ball_distance = self._foot_ball_distance()
-        contact = foot_ball_distance < float(self.reward_cfg["thresholds"]["contact_distance_m"])
+        contact = self._foot_ball_contact()
         self.has_contacted_ball = self.has_contacted_ball | contact
         has_contacted_ball = self.has_contacted_ball.clone()
         ball_escaped = (~self.has_contacted_ball) & (
@@ -213,6 +215,7 @@ class PiPlusKickEnv:
         self.dof_idx = self._dof_indices_by_joint_name()
         self.base_link_idx = self._base_link_idx()
         self.foot_link_idx = self._link_indices(self.model_info.foot_link_names or ["l_ankle_roll_link", "r_ankle_roll_link"])
+        self.foot_link_global_idx = [int(self.robot.links[i].idx) for i in self.foot_link_idx]
 
     def _reset_idx(self, env_ids: torch.Tensor) -> None:
         if env_ids.numel() == 0:
@@ -345,6 +348,15 @@ class PiPlusKickEnv:
             return torch.full((self.num_envs,), 1.0e6, dtype=torch.float32, device=self.device)
         distances = torch.linalg.norm(foot_points - self.ball_pos[:, None, :], dim=-1)
         return torch.min(distances, dim=-1).values
+
+    def _foot_ball_contact(self) -> torch.Tensor:
+        if self.robot is None or self.ball is None:
+            return self._foot_ball_distance() < float(self.reward_cfg["thresholds"]["contact_distance_m"])
+        try:
+            contact = get_foot_ball_contacts(self.robot, self.ball, self.foot_link_global_idx, self.device)
+        except Exception:
+            contact = self._foot_ball_distance() < float(self.reward_cfg["thresholds"]["contact_distance_m"])
+        return contact.reshape(self.num_envs)
 
     def _control_torque(self, torque: torch.Tensor) -> None:
         if self.robot is not None:
