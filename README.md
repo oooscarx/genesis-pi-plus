@@ -132,6 +132,7 @@ The default kick config starts as an approach/contact curriculum: the ball is pl
 ```bash
 uv sync --frozen
 uv run python scripts/train_pi_plus_kick.py --num-envs 1024 --backend cuda --device cuda
+uv run python scripts/train_pi_plus_kick_guarded.py --num-envs 1024 --iterations 10000 --backend cuda --device cuda
 uv run python scripts/test_pi_plus_kick_components.py
 uv run python scripts/eval_pi_plus_kick.py --checkpoint runs/pi_plus_kick/model_*.pt --num-envs 256
 uv run python scripts/play_pi_plus_kick.py --checkpoint runs/pi_plus_kick/model_*.pt --backend metal --device mps --viewer
