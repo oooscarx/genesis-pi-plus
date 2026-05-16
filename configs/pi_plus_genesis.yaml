@@ -122,10 +122,15 @@ sim:
   control_dt: 0.02
 scene:
   ground: true
-  ground_plane_size: [20.0, 20.0]
+  ground_plane_size: [12.0, 8.0]
   ground_tile_size: [0.25, 0.25]
-  ground_color: [0.58, 0.62, 0.60, 1.0]
+  ground_color: [0.10, 0.45, 0.16, 1.0]
   ground_friction: 1.3
+  field_style: soccer
+  field_texture_resolution: [1024, 768]
+  field_stripe_count: 10
+  field_line_color: [0.93, 0.95, 0.90, 1.0]
+  field_line_width_m: 0.045
   viewer_camera_pos: [2.2, -2.2, 1.4]
   viewer_camera_lookat: [0.15, 0.0, 0.35]
   viewer_camera_fov: 45
@@ -140,6 +145,7 @@ ball:
   # Units are 1/s; 0 disables it. Tune against a real roll-distance test later.
   rolling_linear_damping_per_s: 0.8
   rolling_angular_damping_per_s: 0.4
+  color: [0.96, 0.94, 0.86, 1.0]
 test:
   stand_seconds: 5.0
   max_roll_pitch_rad: 0.7

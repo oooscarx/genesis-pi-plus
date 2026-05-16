@@ -10,6 +10,8 @@ import os
 import platform
 from typing import Any
 
+import numpy as np
+
 from .assets import ensure_exists
 
 
@@ -134,10 +136,82 @@ def add_ground(scene, cfg: dict[str, Any]):
             tile_size=tuple(scene_cfg.get("ground_tile_size", [0.25, 0.25])),
         )
         material = gs.materials.Rigid(friction=scene_cfg.get("ground_friction", 1.0))
-        surface = gs.surfaces.Rough(color=tuple(scene_cfg.get("ground_color", [0.58, 0.62, 0.60, 1.0])))
+        surface = _make_ground_surface(gs, scene_cfg)
         return scene.add_entity(ground, material=material, surface=surface, name="ground")
     except Exception as exc:
         raise RuntimeError("TODO: Verify Genesis ground plane API.") from exc
+
+
+def _make_ground_surface(gs: Any, scene_cfg: dict[str, Any]):
+    color = tuple(scene_cfg.get("ground_color", [0.10, 0.45, 0.16, 1.0]))
+    if scene_cfg.get("field_style") != "soccer":
+        return gs.surfaces.Rough(color=color)
+
+    try:
+        texture = _make_soccer_field_texture(scene_cfg)
+        return gs.surfaces.Rough(diffuse_texture=gs.textures.ImageTexture(image_array=texture, encoding="srgb"))
+    except Exception as exc:
+        raise RuntimeError("TODO: Verify Genesis ImageTexture support for the soccer field surface.") from exc
+
+
+def _make_soccer_field_texture(scene_cfg: dict[str, Any]) -> np.ndarray:
+    """Generate a simple soccer pitch texture as RGBA uint8."""
+    width, height = [int(v) for v in scene_cfg.get("field_texture_resolution", [1024, 768])]
+    plane_x, plane_y = [float(v) for v in scene_cfg.get("ground_plane_size", [12.0, 8.0])]
+    base = np.array(scene_cfg.get("ground_color", [0.10, 0.45, 0.16, 1.0]), dtype=np.float32)
+    alt = np.clip(base * np.array([0.78, 1.12, 0.82, 1.0], dtype=np.float32), 0.0, 1.0)
+    line = np.array(scene_cfg.get("field_line_color", [0.93, 0.95, 0.90, 1.0]), dtype=np.float32)
+    img = np.zeros((height, width, 4), dtype=np.float32)
+
+    stripes = max(1, int(scene_cfg.get("field_stripe_count", 10)))
+    stripe_width = max(1, width // stripes)
+    for x in range(width):
+        img[:, x, :] = base if (x // stripe_width) % 2 == 0 else alt
+
+    def px_x(x_m: float) -> int:
+        return int(round((x_m / plane_x + 0.5) * (width - 1)))
+
+    def px_y(y_m: float) -> int:
+        return int(round((0.5 - y_m / plane_y) * (height - 1)))
+
+    line_px = max(2, int(round(float(scene_cfg.get("field_line_width_m", 0.045)) / plane_x * width)))
+
+    def draw_rect(x0: float, y0: float, x1: float, y1: float) -> None:
+        x0p, x1p = sorted((px_x(x0), px_x(x1)))
+        y0p, y1p = sorted((px_y(y0), px_y(y1)))
+        img[y0p : y0p + line_px, x0p:x1p, :] = line
+        img[y1p - line_px : y1p, x0p:x1p, :] = line
+        img[y0p:y1p, x0p : x0p + line_px, :] = line
+        img[y0p:y1p, x1p - line_px : x1p, :] = line
+
+    def draw_vline(x: float, y0: float, y1: float) -> None:
+        xp = px_x(x)
+        y0p, y1p = sorted((px_y(y0), px_y(y1)))
+        img[y0p:y1p, max(0, xp - line_px // 2) : min(width, xp + line_px // 2 + 1), :] = line
+
+    def draw_circle(cx: float, cy: float, radius: float) -> None:
+        yy, xx = np.ogrid[:height, :width]
+        cxp, cyp = px_x(cx), px_y(cy)
+        rx = radius / plane_x * width
+        ry = radius / plane_y * height
+        dist = ((xx - cxp) / rx) ** 2 + ((yy - cyp) / ry) ** 2
+        thickness = max(0.006, line_px / max(width, height) * 2.0)
+        mask = np.abs(dist - 1.0) <= thickness
+        img[mask] = line
+
+    margin_x = plane_x * 0.055
+    margin_y = plane_y * 0.075
+    half_x = plane_x / 2 - margin_x
+    half_y = plane_y / 2 - margin_y
+    draw_rect(-half_x, -half_y, half_x, half_y)
+    draw_vline(0.0, -half_y, half_y)
+    draw_circle(0.0, 0.0, min(plane_x, plane_y) * 0.11)
+    draw_rect(-half_x, -half_y * 0.42, -half_x + plane_x * 0.16, half_y * 0.42)
+    draw_rect(half_x - plane_x * 0.16, -half_y * 0.42, half_x, half_y * 0.42)
+    draw_rect(-half_x, -half_y * 0.22, -half_x + plane_x * 0.055, half_y * 0.22)
+    draw_rect(half_x - plane_x * 0.055, -half_y * 0.22, half_x, half_y * 0.22)
+    img[px_y(0.0) - line_px : px_y(0.0) + line_px + 1, px_x(0.0) - line_px : px_x(0.0) + line_px + 1, :] = line
+    return (np.clip(img, 0.0, 1.0) * 255).astype(np.uint8)
 
 
 def add_ball(scene, cfg: dict[str, Any]):
@@ -155,7 +229,7 @@ def add_ball(scene, cfg: dict[str, Any]):
         return scene.add_entity(
             gs.morphs.Sphere(radius=radius, pos=tuple(pos)),
             material=gs.materials.Rigid(**material_kwargs),
-            surface=gs.surfaces.Rough(color=(0.92, 0.38, 0.12, 1.0)),
+            surface=gs.surfaces.Rough(color=tuple(ball_cfg.get("color", [0.96, 0.94, 0.86, 1.0]))),
             name="ball",
         )
     except Exception as exc:
