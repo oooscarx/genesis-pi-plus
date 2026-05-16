@@ -25,6 +25,6 @@ latency:
   action_delay_steps: [0, 2]
 physics:
   ball_mass_scale: [0.8, 1.2]
-  ground_friction: [0.9, 1.6]
+  ground_friction: [1.1, 1.8]
   joint_kp_scale: [0.85, 1.15]
   joint_kd_scale: [0.85, 1.15]

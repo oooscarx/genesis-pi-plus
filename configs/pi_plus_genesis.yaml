@@ -131,6 +131,7 @@ scene:
   field_stripe_count: 10
   field_line_color: [0.93, 0.95, 0.90, 1.0]
   field_line_width_m: 0.045
+  field_visual_z: -0.006
   viewer_camera_pos: [2.2, -2.2, 1.4]
   viewer_camera_lookat: [0.15, 0.0, 0.35]
   viewer_camera_fov: 45
@@ -140,11 +141,11 @@ ball:
   initial_pos: [0.20, -0.05, 0.065]
   # Genesis Rigid exposes contact friction here. True rolling resistance is not
   # separately modeled yet, so tune this together with ball-speed rewards.
-  friction: 1.2
+  friction: 1.6
   # Empirical damping used by PiPlusKickEnv to approximate rolling energy loss.
   # Units are 1/s; 0 disables it. Tune against a real roll-distance test later.
-  rolling_linear_damping_per_s: 0.8
-  rolling_angular_damping_per_s: 0.4
+  rolling_linear_damping_per_s: 2.5
+  rolling_angular_damping_per_s: 1.5
   color: [0.96, 0.94, 0.86, 1.0]
 test:
   stand_seconds: 5.0

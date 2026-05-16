@@ -134,24 +134,63 @@ def add_ground(scene, cfg: dict[str, Any]):
         ground = gs.morphs.Plane(
             plane_size=tuple(scene_cfg.get("ground_plane_size", [20.0, 20.0])),
             tile_size=tuple(scene_cfg.get("ground_tile_size", [0.25, 0.25])),
+            visualization=scene_cfg.get("field_style") != "soccer",
         )
         material = gs.materials.Rigid(friction=scene_cfg.get("ground_friction", 1.0))
-        surface = _make_ground_surface(gs, scene_cfg)
-        return scene.add_entity(ground, material=material, surface=surface, name="ground")
+        surface = gs.surfaces.Rough(color=tuple(scene_cfg.get("ground_color", [0.10, 0.45, 0.16, 1.0])))
+        ground_entity = scene.add_entity(ground, material=material, surface=surface, name="ground")
+        if scene_cfg.get("field_style") == "soccer" and not bool(cfg.get("sim", {}).get("headless", True)):
+            _add_soccer_field_visuals(scene, gs, scene_cfg)
+        return ground_entity
     except Exception as exc:
         raise RuntimeError("TODO: Verify Genesis ground plane API.") from exc
 
 
-def _make_ground_surface(gs: Any, scene_cfg: dict[str, Any]):
-    color = tuple(scene_cfg.get("ground_color", [0.10, 0.45, 0.16, 1.0]))
-    if scene_cfg.get("field_style") != "soccer":
-        return gs.surfaces.Rough(color=color)
+def _add_soccer_field_visuals(scene, gs: Any, scene_cfg: dict[str, Any]) -> None:
+    plane_x, plane_y = [float(v) for v in scene_cfg.get("ground_plane_size", [12.0, 8.0])]
+    base = tuple(scene_cfg.get("ground_color", [0.10, 0.45, 0.16, 1.0]))
+    alt = tuple(np.clip(np.array(base) * np.array([0.78, 1.12, 0.82, 1.0]), 0.0, 1.0))
+    line_color = tuple(scene_cfg.get("field_line_color", [0.93, 0.95, 0.90, 1.0]))
+    z = float(scene_cfg.get("field_visual_z", -0.006))
+    thickness = 0.004
 
-    try:
-        texture = _make_soccer_field_texture(scene_cfg)
-        return gs.surfaces.Rough(diffuse_texture=gs.textures.ImageTexture(image_array=texture, encoding="srgb"))
-    except Exception as exc:
-        raise RuntimeError("TODO: Verify Genesis ImageTexture support for the soccer field surface.") from exc
+    stripes = max(1, int(scene_cfg.get("field_stripe_count", 10)))
+    stripe_w = plane_x / stripes
+    for i in range(stripes):
+        x = -plane_x / 2 + stripe_w * (i + 0.5)
+        _add_visual_box(scene, gs, (stripe_w, plane_y, thickness), (x, 0.0, z), base if i % 2 == 0 else alt, f"field_stripe_{i}")
+
+    line_w = float(scene_cfg.get("field_line_width_m", 0.045))
+    margin_x = plane_x * 0.055
+    margin_y = plane_y * 0.075
+    half_x = plane_x / 2 - margin_x
+    half_y = plane_y / 2 - margin_y
+    line_z = z + thickness * 0.75
+
+    def add_line(name: str, center: tuple[float, float], size: tuple[float, float]) -> None:
+        _add_visual_box(scene, gs, (size[0], size[1], thickness), (center[0], center[1], line_z), line_color, name)
+
+    add_line("field_touchline_top", (0.0, half_y), (half_x * 2, line_w))
+    add_line("field_touchline_bottom", (0.0, -half_y), (half_x * 2, line_w))
+    add_line("field_goal_line_left", (-half_x, 0.0), (line_w, half_y * 2))
+    add_line("field_goal_line_right", (half_x, 0.0), (line_w, half_y * 2))
+    add_line("field_halfway_line", (0.0, 0.0), (line_w, half_y * 2))
+
+    box_x = plane_x * 0.16
+    box_y = half_y * 0.84
+    add_line("field_left_box_front", (-half_x + box_x, 0.0), (line_w, box_y))
+    add_line("field_left_box_top", (-half_x + box_x / 2, box_y / 2), (box_x, line_w))
+    add_line("field_left_box_bottom", (-half_x + box_x / 2, -box_y / 2), (box_x, line_w))
+    add_line("field_right_box_front", (half_x - box_x, 0.0), (line_w, box_y))
+    add_line("field_right_box_top", (half_x - box_x / 2, box_y / 2), (box_x, line_w))
+    add_line("field_right_box_bottom", (half_x - box_x / 2, -box_y / 2), (box_x, line_w))
+
+    center_radius = min(plane_x, plane_y) * 0.11
+    for i in range(48):
+        angle = 2.0 * np.pi * i / 48
+        x = np.cos(angle) * center_radius
+        y = np.sin(angle) * center_radius
+        add_line(f"field_center_circle_{i}", (x, y), (line_w * 1.4, line_w))
 
 
 def _make_soccer_field_texture(scene_cfg: dict[str, Any]) -> np.ndarray:
@@ -212,6 +251,15 @@ def _make_soccer_field_texture(scene_cfg: dict[str, Any]) -> np.ndarray:
     draw_rect(half_x - plane_x * 0.055, -half_y * 0.22, half_x, half_y * 0.22)
     img[px_y(0.0) - line_px : px_y(0.0) + line_px + 1, px_x(0.0) - line_px : px_x(0.0) + line_px + 1, :] = line
     return (np.clip(img, 0.0, 1.0) * 255).astype(np.uint8)
+
+
+def _add_visual_box(scene, gs: Any, size: tuple[float, float, float], pos: tuple[float, float, float], color: tuple[float, ...], name: str) -> None:
+    scene.add_entity(
+        gs.morphs.Box(size=size, pos=pos, fixed=True, collision=False),
+        material=gs.materials.Rigid(rho=100.0),
+        surface=gs.surfaces.Rough(color=color),
+        name=name,
+    )
 
 
 def add_ball(scene, cfg: dict[str, Any]):
