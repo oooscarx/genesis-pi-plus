@@ -123,6 +123,7 @@ class PiPlusKickEnv:
         actions = actions.to(self.device).float()
         self.prev_actions = self.actions.clone()
         self.prev_ball_pos = self.ball_pos.clone()
+        prev_foot_ball_distance = self._foot_ball_distance()
 
         q, dq = self._get_joint_state()
         base_pos, base_quat = self._get_base_pose()
@@ -167,6 +168,7 @@ class PiPlusKickEnv:
             torque=self.last_torque,
             contact=contact,
             foot_ball_distance=foot_ball_distance,
+            prev_foot_ball_distance=prev_foot_ball_distance,
             kickable=kickable,
             fallen=fallen,
             control_dt=self.control_dt,
@@ -184,6 +186,7 @@ class PiPlusKickEnv:
             "log": {f"reward/{k}": v.mean().detach() for k, v in terms.items()},
         }
         self.extras["log"]["metric/foot_ball_distance_m"] = foot_ball_distance.mean().detach()
+        self.extras["log"]["metric/foot_ball_delta_m"] = (prev_foot_ball_distance - foot_ball_distance).mean().detach()
         self.extras["log"]["episode/success_proxy"] = (torch.linalg.norm(self.ball_pos[:, :2] - self.target_pos, dim=-1) < float(self.reward_cfg["thresholds"]["success_distance_m"])).float().mean()
         self.extras["log"]["episode/fall_rate"] = fallen.float().mean()
         return obs, rewards, done, self.extras

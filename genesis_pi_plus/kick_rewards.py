@@ -16,6 +16,9 @@ class KickRewardScales:
     final_target_distance: float
     ball_contact: float
     foot_ball_proximity: float
+    foot_ball_distance: float
+    foot_ball_closer: float
+    ball_escape: float
     base_upright: float
     base_height: float
     support_stability: float
@@ -41,6 +44,7 @@ def compute_kick_rewards(
     torque: torch.Tensor,
     contact: torch.Tensor,
     foot_ball_distance: torch.Tensor,
+    prev_foot_ball_distance: torch.Tensor,
     kickable: torch.Tensor,
     fallen: torch.Tensor,
     control_dt: float,
@@ -55,6 +59,7 @@ def compute_kick_rewards(
     base_upright = torch.exp(-3.0 * torch.sum(torch.square(base_rpy[:, :2]), dim=-1))
     base_height_reward = torch.exp(-torch.square(base_height - base_height_target) / max(base_height_sigma**2, 1.0e-6))
     stable_gate = ((~fallen).float() * base_upright * base_height_reward).detach()
+    foot_ball_delta = prev_foot_ball_distance - foot_ball_distance
 
     terms = {
         "ball_velocity_to_target": stable_gate * torch.clamp(speed_to_target, min=0.0),
@@ -62,6 +67,9 @@ def compute_kick_rewards(
         "final_target_distance": stable_gate * torch.exp(-torch.linalg.norm(target_vec, dim=-1)),
         "ball_contact": stable_gate * contact.float(),
         "foot_ball_proximity": stable_gate * torch.exp(-torch.square(foot_ball_distance / 0.12)),
+        "foot_ball_distance": stable_gate * foot_ball_distance,
+        "foot_ball_closer": stable_gate * torch.clamp(foot_ball_delta / 0.05, min=-1.0, max=1.0),
+        "ball_escape": (foot_ball_distance > 0.5).float(),
         "base_upright": base_upright,
         "base_height": base_height_reward,
         "support_stability": torch.exp(-torch.linalg.norm(base_rpy[:, :2], dim=-1)),

@@ -4,6 +4,9 @@ scales:
   final_target_distance: 0.2
   ball_contact: 8.0
   foot_ball_proximity: 8.0
+  foot_ball_distance: -4.0
+  foot_ball_closer: 3.0
+  ball_escape: -10.0
   base_upright: 1.4
   base_height: 1.0
   support_stability: 0.8
