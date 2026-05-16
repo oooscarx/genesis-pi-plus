@@ -383,8 +383,10 @@ class PiPlusKickEnv:
             max_delta_rate_rad_per_s=float(control["max_delta_rate_rad_per_s"]),
             max_joint_velocity_rad_per_s=float(control["max_joint_velocity_rad_per_s"]),
             max_roll_pitch_rad=float(safety["max_roll_pitch_rad"]),
+            action_max_roll_pitch_rad=float(safety.get("action_max_roll_pitch_rad", safety["max_roll_pitch_rad"])),
             min_base_height=float(safety["min_base_height"]),
             max_base_height=float(safety["max_base_height"]),
+            action_min_base_height=float(safety.get("action_min_base_height", safety["min_base_height"])),
             control_dt=self.control_dt,
             emergency_stop_file=safety.get("emergency_stop_file"),
         )

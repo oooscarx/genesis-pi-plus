@@ -25,19 +25,19 @@ control:
     l_shoulder_roll_joint: 0.0
     l_upper_arm_joint: 0.0
     l_elbow_joint: 0.0
-    r_hip_pitch_joint: 0.06
-    r_hip_roll_joint: 0.05
-    r_thigh_joint: 0.04
-    r_calf_joint: 0.06
-    r_ankle_pitch_joint: 0.05
-    r_ankle_roll_joint: 0.04
+    r_hip_pitch_joint: 0.035
+    r_hip_roll_joint: 0.025
+    r_thigh_joint: 0.02
+    r_calf_joint: 0.035
+    r_ankle_pitch_joint: 0.03
+    r_ankle_roll_joint: 0.02
     r_shoulder_pitch_joint: 0.0
     r_shoulder_roll_joint: 0.0
     r_upper_arm_joint: 0.0
     r_elbow_joint: 0.0
-  max_delta_rad: 0.08
-  max_delta_rate_rad_per_s: 1.5
-  max_joint_velocity_rad_per_s: 10.0
+  max_delta_rad: 0.05
+  max_delta_rate_rad_per_s: 0.8
+  max_joint_velocity_rad_per_s: 8.0
   max_torque_leg: 20.0
   max_torque_arm: 10.0
 task:
@@ -55,7 +55,9 @@ task:
   kickable_y_abs_max: 0.18
 safety:
   max_roll_pitch_rad: 0.75
+  action_max_roll_pitch_rad: 0.25
   min_base_height: 0.20
+  action_min_base_height: 0.32
   max_base_height: 0.65
   emergency_stop_file: null
 rsl_rl:
@@ -67,7 +69,7 @@ rsl_rl:
   empirical_normalization: false
   policy:
     class_name: ActorCritic
-    init_noise_std: 0.10
+    init_noise_std: 0.05
     noise_std_type: scalar
     actor_hidden_dims: [256, 256, 128]
     critic_hidden_dims: [256, 256, 128]
@@ -77,10 +79,10 @@ rsl_rl:
     value_loss_coef: 1.0
     use_clipped_value_loss: true
     clip_param: 0.2
-    entropy_coef: 0.0001
+    entropy_coef: 0.0
     num_learning_epochs: 5
     num_mini_batches: 4
-    learning_rate: 0.00005
+    learning_rate: 0.00003
     schedule: adaptive
     gamma: 0.99
     lam: 0.95

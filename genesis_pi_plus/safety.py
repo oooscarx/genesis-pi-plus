@@ -14,8 +14,10 @@ class SafetyLimits:
     max_delta_rate_rad_per_s: float
     max_joint_velocity_rad_per_s: float
     max_roll_pitch_rad: float
+    action_max_roll_pitch_rad: float
     min_base_height: float
     max_base_height: float
+    action_min_base_height: float
     control_dt: float
     emergency_stop_file: str | None = None
 
@@ -47,8 +49,8 @@ class ResidualSafetyFilter:
         delta = torch.max(torch.min(delta, prev_delta + max_step), prev_delta - max_step)
 
         velocity_ok = torch.all(torch.abs(joint_vel) <= self.limits.max_joint_velocity_rad_per_s, dim=-1)
-        attitude_ok = torch.all(torch.abs(base_rpy[:, :2]) <= self.limits.max_roll_pitch_rad, dim=-1)
-        height_ok = (base_height >= self.limits.min_base_height) & (base_height <= self.limits.max_base_height)
+        attitude_ok = torch.all(torch.abs(base_rpy[:, :2]) <= self.limits.action_max_roll_pitch_rad, dim=-1)
+        height_ok = (base_height >= self.limits.action_min_base_height) & (base_height <= self.limits.max_base_height)
         ok = velocity_ok & attitude_ok & height_ok & kickable
         safe = torch.where(ok[:, None], delta, torch.zeros_like(delta))
         return safe, delta
