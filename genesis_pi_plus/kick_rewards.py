@@ -68,7 +68,12 @@ def compute_kick_rewards(
     speed_to_target = torch.sum(ball_vel * target_dir, dim=-1)
     speed_mag = torch.linalg.norm(ball_vel, dim=-1)
     ball_progress_to_target = torch.sum((ball_pos[:, :2] - initial_ball_pos[:, :2]) * initial_target_dir, dim=-1)
-    effective_kick_speed = torch.clamp((speed_to_target - min_effective_ball_speed) / max(min_effective_ball_speed, 1.0e-6), min=0.0, max=1.0)
+    effective_speed_target = torch.clamp(desired_ball_speed, min=max(min_effective_ball_speed, 1.0e-6))
+    effective_kick_speed = torch.clamp(
+        (speed_to_target - min_effective_ball_speed) / effective_speed_target,
+        min=0.0,
+        max=2.0,
+    )
     base_vertical_velocity = torch.abs((base_height - prev_base_height) / control_dt)
     base_upright = torch.exp(-3.0 * torch.sum(torch.square(base_rpy[:, :2]), dim=-1))
     base_height_reward = torch.exp(-torch.square(base_height - base_height_target) / max(base_height_sigma**2, 1.0e-6))

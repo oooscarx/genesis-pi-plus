@@ -27,26 +27,26 @@ control:
     l_elbow_joint: 0.0
     r_hip_pitch_joint: 0.11
     r_hip_roll_joint: 0.06
-    r_thigh_joint: 0.14
-    r_calf_joint: 0.16
-    r_ankle_pitch_joint: 0.10
+    r_thigh_joint: 0.20
+    r_calf_joint: 0.22
+    r_ankle_pitch_joint: 0.14
     r_ankle_roll_joint: 0.04
     r_shoulder_pitch_joint: 0.0
     r_shoulder_roll_joint: 0.0
     r_upper_arm_joint: 0.0
     r_elbow_joint: 0.0
-  max_delta_rad: 0.22
-  max_delta_rate_rad_per_s: 6.0
+  max_delta_rad: 0.30
+  max_delta_rate_rad_per_s: 8.0
   max_joint_velocity_rad_per_s: 8.0
-  max_torque_leg: 20.0
+  max_torque_leg: 25.0
   max_torque_arm: 10.0
 task:
   ball_initial_pos: [0.17, -0.06, 0.065]
   ball_pos_range:
     x: [0.17, 0.25]
     y: [-0.09, -0.02]
-  kick_start_s: 0.4
-  kick_end_s: 1.0
+  kick_start_s: 0.3
+  kick_end_s: 1.2
   recovery_start_s: 1.0
   target_mode: vector
   target_pos_robot: [1.8, 0.0]

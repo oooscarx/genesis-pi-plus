@@ -1,11 +1,11 @@
 scales:
-  ball_velocity_to_target: 3.0
-  ball_speed_match: 0.4
-  ball_progress_to_target: 2.0
-  effective_kick_speed: 2.0
+  ball_velocity_to_target: 7.0
+  ball_speed_match: 2.0
+  ball_progress_to_target: 4.0
+  effective_kick_speed: 7.0
   final_target_distance: 0.4
-  ball_contact: 6.0
-  has_contacted_ball: 3.0
+  ball_contact: 3.0
+  has_contacted_ball: 0.4
   missed_kick: -25.0
   foot_ball_proximity: 4.0
   foot_ball_distance: -4.0
@@ -25,7 +25,7 @@ thresholds:
   contact_distance_m: 0.08
   ball_escape_distance_m: 0.45
   success_distance_m: 0.35
-  min_effective_ball_speed: 0.20
+  min_effective_ball_speed: 0.05
   base_height_target: 0.38
   base_height_sigma: 0.10
   joint_limit_margin_rad: 0.04
