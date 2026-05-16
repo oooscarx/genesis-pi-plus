@@ -351,11 +351,8 @@ class PiPlusKickEnv:
 
     def _foot_ball_contact(self) -> torch.Tensor:
         if self.robot is None or self.ball is None:
-            return self._foot_ball_distance() < float(self.reward_cfg["thresholds"]["contact_distance_m"])
-        try:
-            contact = get_foot_ball_contacts(self.robot, self.ball, self.foot_link_global_idx, self.device)
-        except Exception:
-            contact = self._foot_ball_distance() < float(self.reward_cfg["thresholds"]["contact_distance_m"])
+            raise RuntimeError("Foot-ball contact requires a built Genesis scene with pi_plus and ball entities.")
+        contact = get_foot_ball_contacts(self.robot, self.ball, self.foot_link_global_idx, self.device)
         return contact.reshape(self.num_envs)
 
     def _control_torque(self, torque: torch.Tensor) -> None:

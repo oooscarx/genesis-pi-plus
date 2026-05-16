@@ -33,6 +33,7 @@ def test_observation_shape() -> None:
 
 def test_safety_action_clamp() -> None:
     env = PiPlusKickEnv(default_kick_env_paths(ROOT), num_envs=2, device="cpu", build_scene=False)
+    env._foot_ball_contact = lambda: torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
     raw = torch.full((2, env.num_actions), 10.0)
     obs, _ = env.reset()
     _, _, _, _ = env.step(raw)

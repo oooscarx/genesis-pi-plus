@@ -59,8 +59,7 @@ def print_initial_state(env: PiPlusKickEnv, contact_threshold: float) -> None:
     print("Initial pi_plus kick scene")
     print(f"ball_pos_robot=({ball_pos[0]:.3f}, {ball_pos[1]:.3f}, {ball_pos[2]:.3f})")
     print(f"foot_ball_distance={distance:.4f} m")
-    print(f"distance_fallback_contact_threshold={contact_threshold:.4f} m")
-    print(f"distance_fallback_initial_contact={distance < contact_threshold}")
+    print(f"legacy_distance_threshold={contact_threshold:.4f} m")
 
 
 def parse_args() -> argparse.Namespace:
