@@ -20,6 +20,7 @@ def main() -> None:
     test_safety_action_clamp()
     test_reward_direction_term()
     test_reward_contact_stage_gating()
+    test_reward_missed_kick_penalty()
     print("kick component tests passed")
 
 
@@ -47,6 +48,7 @@ def test_reward_direction_term() -> None:
         final_target_distance=0.0,
         ball_contact=0.0,
         has_contacted_ball=0.0,
+        missed_kick=0.0,
         foot_ball_proximity=0.0,
         foot_ball_distance=0.0,
         foot_ball_closer=0.0,
@@ -74,6 +76,7 @@ def test_reward_direction_term() -> None:
         torque=torch.zeros(1, 20),
         contact=torch.tensor([False]),
         has_contacted_ball=torch.tensor([True]),
+        missed_kick=torch.tensor([False]),
         foot_ball_distance=torch.tensor([1.0]),
         prev_foot_ball_distance=torch.tensor([1.0]),
         kickable=torch.tensor([True]),
@@ -95,6 +98,7 @@ def test_reward_direction_term() -> None:
         torque=torch.zeros(1, 20),
         contact=torch.tensor([False]),
         has_contacted_ball=torch.tensor([True]),
+        missed_kick=torch.tensor([False]),
         foot_ball_distance=torch.tensor([1.0]),
         prev_foot_ball_distance=torch.tensor([1.0]),
         kickable=torch.tensor([True]),
@@ -113,6 +117,7 @@ def test_reward_contact_stage_gating() -> None:
         final_target_distance=0.0,
         ball_contact=0.0,
         has_contacted_ball=0.0,
+        missed_kick=0.0,
         foot_ball_proximity=0.0,
         foot_ball_distance=-1.0,
         foot_ball_closer=0.0,
@@ -139,6 +144,7 @@ def test_reward_contact_stage_gating() -> None:
         prev_action=torch.zeros(1, 20),
         torque=torch.zeros(1, 20),
         contact=torch.tensor([False]),
+        missed_kick=torch.tensor([False]),
         foot_ball_distance=torch.tensor([1.0]),
         prev_foot_ball_distance=torch.tensor([0.9]),
         kickable=torch.tensor([True]),
@@ -154,6 +160,54 @@ def test_reward_contact_stage_gating() -> None:
     assert post_terms["ball_velocity_to_target"].item() > 0.0
     assert post_terms["foot_ball_distance"].item() == 0.0
     assert post_reward.item() > pre_reward.item()
+
+
+def test_reward_missed_kick_penalty() -> None:
+    scales = KickRewardScales(
+        ball_velocity_to_target=0.0,
+        ball_speed_match=0.0,
+        final_target_distance=0.0,
+        ball_contact=0.0,
+        has_contacted_ball=0.0,
+        missed_kick=-2.0,
+        foot_ball_proximity=0.0,
+        foot_ball_distance=0.0,
+        foot_ball_closer=0.0,
+        ball_escape=0.0,
+        base_upright=0.0,
+        base_height=0.0,
+        support_stability=0.0,
+        action_rate=0.0,
+        action_magnitude=0.0,
+        torque=0.0,
+        joint_limit=0.0,
+        fall=0.0,
+        not_kickable=0.0,
+    )
+    reward, terms = compute_kick_rewards(
+        scales=scales,
+        ball_pos=torch.tensor([[0.0, 0.0, 0.05]]),
+        prev_ball_pos=torch.tensor([[0.0, 0.0, 0.05]]),
+        target_pos=torch.tensor([[1.0, 0.0]]),
+        desired_ball_speed=torch.tensor([1.0]),
+        base_rpy=torch.zeros(1, 3),
+        base_height=torch.tensor([0.38]),
+        action=torch.zeros(1, 20),
+        prev_action=torch.zeros(1, 20),
+        torque=torch.zeros(1, 20),
+        contact=torch.tensor([False]),
+        has_contacted_ball=torch.tensor([False]),
+        missed_kick=torch.tensor([True]),
+        foot_ball_distance=torch.tensor([0.1]),
+        prev_foot_ball_distance=torch.tensor([0.1]),
+        kickable=torch.tensor([True]),
+        fallen=torch.tensor([False]),
+        control_dt=0.1,
+        base_height_target=0.38,
+        base_height_sigma=0.1,
+    )
+    assert terms["missed_kick"].item() == 1.0
+    assert reward.item() < 0.0
 
 
 if __name__ == "__main__":

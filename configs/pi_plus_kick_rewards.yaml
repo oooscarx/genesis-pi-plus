@@ -2,8 +2,9 @@ scales:
   ball_velocity_to_target: 0.5
   ball_speed_match: 0.1
   final_target_distance: 0.2
-  ball_contact: 8.0
-  has_contacted_ball: 4.0
+  ball_contact: 20.0
+  has_contacted_ball: 16.0
+  missed_kick: -40.0
   foot_ball_proximity: 8.0
   foot_ball_distance: -8.0
   foot_ball_closer: 5.0
@@ -12,8 +13,8 @@ scales:
   base_height: 1.0
   support_stability: 0.8
   action_rate: -0.05
-  action_magnitude: -0.01
-  torque: -0.002
+  action_magnitude: 0.0
+  torque: -0.0005
   joint_limit: -0.5
   fall: -100.0
   not_kickable: -0.2

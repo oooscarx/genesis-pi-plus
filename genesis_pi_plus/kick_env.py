@@ -161,6 +161,7 @@ class PiPlusKickEnv:
         contact = self._foot_ball_contact()
         self.has_contacted_ball = self.has_contacted_ball | contact
         has_contacted_ball = self.has_contacted_ball.clone()
+        missed_kick = (~has_contacted_ball) & self._after_kick_window()
         ball_escaped = (~self.has_contacted_ball) & (
             foot_ball_distance > float(self.reward_cfg["thresholds"]["ball_escape_distance_m"])
         )
@@ -179,6 +180,7 @@ class PiPlusKickEnv:
             torque=self.last_torque,
             contact=contact,
             has_contacted_ball=has_contacted_ball,
+            missed_kick=missed_kick,
             foot_ball_distance=foot_ball_distance,
             prev_foot_ball_distance=prev_foot_ball_distance,
             kickable=kickable,
@@ -204,6 +206,7 @@ class PiPlusKickEnv:
         self.extras["log"]["episode/fall_rate"] = fallen.float().mean()
         self.extras["log"]["episode/ball_escape_rate"] = ball_escaped.float().mean()
         self.extras["log"]["episode/has_contacted_ball_rate"] = has_contacted_ball.float().mean()
+        self.extras["log"]["episode/missed_kick_rate"] = missed_kick.float().mean()
         self.extras["log"]["metric/kick_window_active"] = self._kick_window_active().float().mean().detach()
         return obs, rewards, done, self.extras
 
@@ -387,6 +390,11 @@ class PiPlusKickEnv:
         start_step = int(float(task.get("kick_start_s", 0.0)) / self.control_dt)
         end_step = int(float(task.get("kick_end_s", self.max_episode_length * self.control_dt)) / self.control_dt)
         return (self.episode_length_buf >= start_step) & (self.episode_length_buf < end_step)
+
+    def _after_kick_window(self) -> torch.Tensor:
+        task = self.train_cfg.get("task", {})
+        end_step = int(float(task.get("kick_end_s", self.max_episode_length * self.control_dt)) / self.control_dt)
+        return self.episode_length_buf >= end_step
 
     def _make_action_scale(self) -> torch.Tensor:
         control = self.train_cfg["control"]

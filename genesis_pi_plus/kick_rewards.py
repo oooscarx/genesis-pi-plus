@@ -16,6 +16,7 @@ class KickRewardScales:
     final_target_distance: float
     ball_contact: float
     has_contacted_ball: float
+    missed_kick: float
     foot_ball_proximity: float
     foot_ball_distance: float
     foot_ball_closer: float
@@ -45,6 +46,7 @@ def compute_kick_rewards(
     torque: torch.Tensor,
     contact: torch.Tensor,
     has_contacted_ball: torch.Tensor,
+    missed_kick: torch.Tensor,
     foot_ball_distance: torch.Tensor,
     prev_foot_ball_distance: torch.Tensor,
     kickable: torch.Tensor,
@@ -71,6 +73,7 @@ def compute_kick_rewards(
         "final_target_distance": post_contact_gate * torch.exp(-torch.linalg.norm(target_vec, dim=-1)),
         "ball_contact": stable_gate * contact.float(),
         "has_contacted_ball": stable_gate * has_contacted_ball.float(),
+        "missed_kick": missed_kick.float(),
         "foot_ball_proximity": pre_contact_gate * torch.exp(-torch.square(foot_ball_distance / 0.12)),
         "foot_ball_distance": pre_contact_gate * foot_ball_distance,
         "foot_ball_closer": pre_contact_gate * torch.clamp(foot_ball_delta / 0.05, min=-1.0, max=1.0),
