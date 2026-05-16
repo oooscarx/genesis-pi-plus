@@ -88,6 +88,9 @@ class PiPlusKickEnv:
 
         self.safety_filter = ResidualSafetyFilter(self._make_safety_limits(), self.action_scale)
         self.reward_scales = KickRewardScales(**self.reward_cfg["scales"])
+        ball_cfg = self.robot_cfg.get("ball", {})
+        self.ball_linear_damping_per_s = float(ball_cfg.get("rolling_linear_damping_per_s", 0.0) or 0.0)
+        self.ball_angular_damping_per_s = float(ball_cfg.get("rolling_angular_damping_per_s", 0.0) or 0.0)
 
         self.gs = None
         self.scene = None
@@ -153,6 +156,7 @@ class PiPlusKickEnv:
             if self.scene is not None:
                 self.scene.step(update_visualizer=not self.headless, refresh_visualizer=not self.headless)
 
+        self._apply_ball_rolling_damping()
         self.episode_length_buf += 1
         self.ball_pos = self._get_ball_pos()
         base_pos, base_quat = self._get_base_pose()
@@ -252,6 +256,7 @@ class PiPlusKickEnv:
             self.robot.zero_all_dofs_velocity(envs_idx=env_ids)
         if self.ball is not None:
             self._set_entity_pos(self.ball, self.ball_pos[env_ids], env_ids)
+            self._zero_entity_velocity(self.ball, env_ids)
         self.prev_ball_pos[env_ids] = self.ball_pos[env_ids]
 
     def _sample_task(self, env_ids: torch.Tensor) -> None:
@@ -527,6 +532,35 @@ class PiPlusKickEnv:
             entity.set_pos(pos, envs_idx=env_ids)
         except TypeError:
             entity.set_pos(pos[0])
+
+    def _zero_entity_velocity(self, entity, env_ids: torch.Tensor) -> None:
+        try:
+            entity.set_dofs_velocity(None, envs_idx=env_ids)
+        except TypeError:
+            try:
+                entity.set_dofs_velocity(None)
+            except AttributeError:
+                pass
+
+    def _apply_ball_rolling_damping(self) -> None:
+        if self.ball is None:
+            return
+        if self.ball_linear_damping_per_s <= 0.0 and self.ball_angular_damping_per_s <= 0.0:
+            return
+        try:
+            dof_vel = _as_torch(self.ball.get_dofs_velocity(), self.device).reshape(self.num_envs, -1)
+            if dof_vel.shape[1] < 6:
+                return
+            damped = dof_vel.clone()
+            if self.ball_linear_damping_per_s > 0.0:
+                linear_factor = float(np.exp(-self.ball_linear_damping_per_s * self.control_dt))
+                damped[:, 0:2] *= linear_factor
+            if self.ball_angular_damping_per_s > 0.0:
+                angular_factor = float(np.exp(-self.ball_angular_damping_per_s * self.control_dt))
+                damped[:, 3:6] *= angular_factor
+            self.ball.set_dofs_velocity(damped)
+        except (AttributeError, TypeError, RuntimeError) as exc:
+            raise RuntimeError("TODO: Verify Genesis free-body velocity API for ball rolling damping.") from exc
 
     def _curriculum_flag(self, key: str) -> bool:
         stage = int(self.domain_rand_cfg.get("curriculum", {}).get("stage", 0))
