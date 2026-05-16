@@ -45,6 +45,8 @@ def test_reward_direction_term() -> None:
     scales = KickRewardScales(
         ball_velocity_to_target=1.0,
         ball_speed_match=0.0,
+        ball_progress_to_target=0.0,
+        effective_kick_speed=0.0,
         final_target_distance=0.0,
         ball_contact=0.0,
         has_contacted_ball=0.0,
@@ -62,15 +64,18 @@ def test_reward_direction_term() -> None:
         joint_limit=0.0,
         fall=0.0,
         not_kickable=0.0,
+        base_vertical_velocity=0.0,
     )
     reward_forward, _ = compute_kick_rewards(
         scales=scales,
         ball_pos=torch.tensor([[0.1, 0.0, 0.05]]),
         prev_ball_pos=torch.tensor([[0.0, 0.0, 0.05]]),
+        initial_ball_pos=torch.tensor([[0.0, 0.0, 0.05]]),
         target_pos=torch.tensor([[1.0, 0.0]]),
         desired_ball_speed=torch.tensor([1.0]),
         base_rpy=torch.zeros(1, 3),
         base_height=torch.tensor([0.38]),
+        prev_base_height=torch.tensor([0.38]),
         action=torch.zeros(1, 20),
         prev_action=torch.zeros(1, 20),
         torque=torch.zeros(1, 20),
@@ -84,15 +89,18 @@ def test_reward_direction_term() -> None:
         control_dt=0.1,
         base_height_target=0.38,
         base_height_sigma=0.1,
+        min_effective_ball_speed=0.2,
     )
     reward_backward, _ = compute_kick_rewards(
         scales=scales,
         ball_pos=torch.tensor([[-0.1, 0.0, 0.05]]),
         prev_ball_pos=torch.tensor([[0.0, 0.0, 0.05]]),
+        initial_ball_pos=torch.tensor([[0.0, 0.0, 0.05]]),
         target_pos=torch.tensor([[1.0, 0.0]]),
         desired_ball_speed=torch.tensor([1.0]),
         base_rpy=torch.zeros(1, 3),
         base_height=torch.tensor([0.38]),
+        prev_base_height=torch.tensor([0.38]),
         action=torch.zeros(1, 20),
         prev_action=torch.zeros(1, 20),
         torque=torch.zeros(1, 20),
@@ -106,6 +114,7 @@ def test_reward_direction_term() -> None:
         control_dt=0.1,
         base_height_target=0.38,
         base_height_sigma=0.1,
+        min_effective_ball_speed=0.2,
     )
     assert reward_forward.item() > reward_backward.item()
 
@@ -114,6 +123,8 @@ def test_reward_contact_stage_gating() -> None:
     scales = KickRewardScales(
         ball_velocity_to_target=1.0,
         ball_speed_match=0.0,
+        ball_progress_to_target=0.0,
+        effective_kick_speed=0.0,
         final_target_distance=0.0,
         ball_contact=0.0,
         has_contacted_ball=0.0,
@@ -131,15 +142,18 @@ def test_reward_contact_stage_gating() -> None:
         joint_limit=0.0,
         fall=0.0,
         not_kickable=0.0,
+        base_vertical_velocity=0.0,
     )
     common = dict(
         scales=scales,
         ball_pos=torch.tensor([[1.0, 0.0, 0.05]]),
         prev_ball_pos=torch.tensor([[0.9, 0.0, 0.05]]),
+        initial_ball_pos=torch.tensor([[0.0, 0.0, 0.05]]),
         target_pos=torch.tensor([[2.0, 0.0]]),
         desired_ball_speed=torch.tensor([1.0]),
         base_rpy=torch.zeros(1, 3),
         base_height=torch.tensor([0.38]),
+        prev_base_height=torch.tensor([0.38]),
         action=torch.zeros(1, 20),
         prev_action=torch.zeros(1, 20),
         torque=torch.zeros(1, 20),
@@ -152,6 +166,7 @@ def test_reward_contact_stage_gating() -> None:
         control_dt=0.1,
         base_height_target=0.38,
         base_height_sigma=0.1,
+        min_effective_ball_speed=0.2,
     )
     pre_reward, pre_terms = compute_kick_rewards(has_contacted_ball=torch.tensor([False]), **common)
     post_reward, post_terms = compute_kick_rewards(has_contacted_ball=torch.tensor([True]), **common)
@@ -166,6 +181,8 @@ def test_reward_missed_kick_penalty() -> None:
     scales = KickRewardScales(
         ball_velocity_to_target=0.0,
         ball_speed_match=0.0,
+        ball_progress_to_target=0.0,
+        effective_kick_speed=0.0,
         final_target_distance=0.0,
         ball_contact=0.0,
         has_contacted_ball=0.0,
@@ -183,15 +200,18 @@ def test_reward_missed_kick_penalty() -> None:
         joint_limit=0.0,
         fall=0.0,
         not_kickable=0.0,
+        base_vertical_velocity=0.0,
     )
     reward, terms = compute_kick_rewards(
         scales=scales,
         ball_pos=torch.tensor([[0.0, 0.0, 0.05]]),
         prev_ball_pos=torch.tensor([[0.0, 0.0, 0.05]]),
+        initial_ball_pos=torch.tensor([[0.0, 0.0, 0.05]]),
         target_pos=torch.tensor([[1.0, 0.0]]),
         desired_ball_speed=torch.tensor([1.0]),
         base_rpy=torch.zeros(1, 3),
         base_height=torch.tensor([0.38]),
+        prev_base_height=torch.tensor([0.38]),
         action=torch.zeros(1, 20),
         prev_action=torch.zeros(1, 20),
         torque=torch.zeros(1, 20),
@@ -205,6 +225,7 @@ def test_reward_missed_kick_penalty() -> None:
         control_dt=0.1,
         base_height_target=0.38,
         base_height_sigma=0.1,
+        min_effective_ball_speed=0.2,
     )
     assert terms["missed_kick"].item() == 1.0
     assert reward.item() < 0.0

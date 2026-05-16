@@ -80,6 +80,7 @@ class PiPlusKickEnv:
         self.baseline: LocomotionBaseline | None = self._make_baseline(backend)
         self.ball_pos = torch.zeros(self.num_envs, 3, device=self.device)
         self.prev_ball_pos = torch.zeros_like(self.ball_pos)
+        self.initial_ball_pos = torch.zeros_like(self.ball_pos)
         self.has_contacted_ball = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self.target_pos = torch.zeros(self.num_envs, 2, device=self.device)
         self.desired_ball_speed = torch.zeros(self.num_envs, device=self.device)
@@ -132,6 +133,7 @@ class PiPlusKickEnv:
 
         q, dq = self._get_joint_state()
         base_pos, base_quat = self._get_base_pose()
+        prev_base_height = base_pos[:, 2].clone()
         base_rpy = quat_wxyz_to_rpy_torch(base_quat)
         kickable = self._is_kickable(self.ball_pos)
         safe_delta, unclamped_delta = self.safety_filter.filter_action(
@@ -171,10 +173,12 @@ class PiPlusKickEnv:
             scales=self.reward_scales,
             ball_pos=self.ball_pos,
             prev_ball_pos=self.prev_ball_pos,
+            initial_ball_pos=self.initial_ball_pos,
             target_pos=self.target_pos,
             desired_ball_speed=self.desired_ball_speed,
             base_rpy=base_rpy,
             base_height=base_pos[:, 2],
+            prev_base_height=prev_base_height,
             action=safe_delta,
             prev_action=self.prev_actions,
             torque=self.last_torque,
@@ -188,6 +192,7 @@ class PiPlusKickEnv:
             control_dt=self.control_dt,
             base_height_target=float(self.reward_cfg["thresholds"]["base_height_target"]),
             base_height_sigma=float(self.reward_cfg["thresholds"]["base_height_sigma"]),
+            min_effective_ball_speed=float(self.reward_cfg["thresholds"]["min_effective_ball_speed"]),
         )
 
         if torch.any(done):
@@ -201,6 +206,10 @@ class PiPlusKickEnv:
         }
         self.extras["log"]["metric/foot_ball_distance_m"] = foot_ball_distance.mean().detach()
         self.extras["log"]["metric/foot_ball_delta_m"] = (prev_foot_ball_distance - foot_ball_distance).mean().detach()
+        ball_vel_xy = (self.ball_pos[:, :2] - self.prev_ball_pos[:, :2]) / self.control_dt
+        target_dir = normalize_xy(self.target_pos - self.ball_pos[:, :2])
+        self.extras["log"]["metric/ball_speed_mps"] = torch.linalg.norm(ball_vel_xy, dim=-1).mean().detach()
+        self.extras["log"]["metric/ball_speed_to_target_mps"] = torch.sum(ball_vel_xy * target_dir, dim=-1).mean().detach()
         self.extras["log"]["episode/success_proxy"] = (torch.linalg.norm(self.ball_pos[:, :2] - self.target_pos, dim=-1) < float(self.reward_cfg["thresholds"]["success_distance_m"])).float().mean()
         self.extras["log"]["episode/contact_rate"] = contact.float().mean()
         self.extras["log"]["episode/fall_rate"] = fallen.float().mean()
@@ -255,6 +264,7 @@ class PiPlusKickEnv:
             ball[:, 0] = _rand_uniform(xr[0], xr[1], n, self.device)
             ball[:, 1] = _rand_uniform(yr[0], yr[1], n, self.device)
         self.ball_pos[env_ids] = ball
+        self.initial_ball_pos[env_ids] = ball
 
         if self._curriculum_flag("randomize_target"):
             ar = self._stage_value("target_angle_range_rad", task["target_angle_range_rad"])

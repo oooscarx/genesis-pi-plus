@@ -56,6 +56,7 @@ def main() -> None:
         score = (
             metrics["contact_rate_mean"] * 5.0
             + metrics["has_contacted_ball_rate_mean"] * 5.0
+            + metrics["ball_speed_to_target_mps_mean"] * 2.0
             - metrics["foot_ball_distance_m_mean"] * pre_contact_weight
             - metrics["fall_rate_mean"] * 10.0
         )
@@ -65,6 +66,7 @@ def main() -> None:
             f"fall_rate_mean={metrics['fall_rate_mean']:.4f} "
             f"contact_mean={metrics['contact_rate_mean']:.4f} "
             f"has_contacted_mean={metrics['has_contacted_ball_rate_mean']:.4f} "
+            f"ball_speed_to_target_mps={metrics['ball_speed_to_target_mps_mean']:.4f} "
             f"foot_ball_distance_m={metrics['foot_ball_distance_m_mean']:.4f}"
         )
 
@@ -98,6 +100,8 @@ def evaluate_runner_policy(runner, env: PiPlusKickEnv, n_steps: int) -> dict[str
     contact_sum = torch.zeros((), device=env.device)
     has_contacted_sum = torch.zeros((), device=env.device)
     distance_sum = torch.zeros((), device=env.device)
+    ball_speed_sum = torch.zeros((), device=env.device)
+    ball_speed_to_target_sum = torch.zeros((), device=env.device)
     reward_sum = torch.zeros((), device=env.device)
     for _ in range(n_steps):
         obs_for_policy = runner.obs_normalizer(obs.to(runner.device))
@@ -108,6 +112,8 @@ def evaluate_runner_policy(runner, env: PiPlusKickEnv, n_steps: int) -> dict[str
         contact_sum += extras["log"].get("episode/contact_rate", torch.zeros((), device=env.device))
         has_contacted_sum += extras["log"].get("episode/has_contacted_ball_rate", torch.zeros((), device=env.device))
         distance_sum += extras["log"].get("metric/foot_ball_distance_m", torch.zeros((), device=env.device))
+        ball_speed_sum += extras["log"].get("metric/ball_speed_mps", torch.zeros((), device=env.device))
+        ball_speed_to_target_sum += extras["log"].get("metric/ball_speed_to_target_mps", torch.zeros((), device=env.device))
     runner.train_mode()
     materialize_env_buffers(env)
     denom = max(n_steps, 1)
@@ -117,6 +123,8 @@ def evaluate_runner_policy(runner, env: PiPlusKickEnv, n_steps: int) -> dict[str
         "contact_rate_mean": float(contact_sum / denom),
         "has_contacted_ball_rate_mean": float(has_contacted_sum / denom),
         "foot_ball_distance_m_mean": float(distance_sum / denom),
+        "ball_speed_mps_mean": float(ball_speed_sum / denom),
+        "ball_speed_to_target_mps_mean": float(ball_speed_to_target_sum / denom),
     }
 
 
@@ -129,6 +137,7 @@ def materialize_env_buffers(env: PiPlusKickEnv) -> None:
         "last_torque",
         "ball_pos",
         "prev_ball_pos",
+        "initial_ball_pos",
         "has_contacted_ball",
         "target_pos",
         "desired_ball_speed",

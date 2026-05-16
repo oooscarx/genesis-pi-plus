@@ -33,6 +33,8 @@ def main() -> None:
     contact_sum = torch.zeros((), device=env.device)
     has_contacted_sum = torch.zeros((), device=env.device)
     distance_sum = torch.zeros((), device=env.device)
+    ball_speed_sum = torch.zeros((), device=env.device)
+    ball_speed_to_target_sum = torch.zeros((), device=env.device)
     fall_sum = torch.zeros((), device=env.device)
     n_steps = int(args.duration / env.control_dt)
     for _ in range(n_steps):
@@ -44,6 +46,8 @@ def main() -> None:
         contact_sum += extras["log"].get("episode/contact_rate", torch.zeros((), device=env.device))
         has_contacted_sum += extras["log"].get("episode/has_contacted_ball_rate", torch.zeros((), device=env.device))
         distance_sum += extras["log"].get("metric/foot_ball_distance_m", torch.zeros((), device=env.device))
+        ball_speed_sum += extras["log"].get("metric/ball_speed_mps", torch.zeros((), device=env.device))
+        ball_speed_to_target_sum += extras["log"].get("metric/ball_speed_to_target_mps", torch.zeros((), device=env.device))
         fall_sum += extras["log"].get("episode/fall_rate", torch.zeros((), device=env.device))
     success = extras["log"].get("episode/success_proxy")
     fall_rate = extras["log"].get("episode/fall_rate")
@@ -55,6 +59,8 @@ def main() -> None:
     print(f"contact_rate_mean={float(contact_sum / max(n_steps, 1)):.4f}")
     print(f"has_contacted_ball_rate_mean={float(has_contacted_sum / max(n_steps, 1)):.4f}")
     print(f"foot_ball_distance_m_mean={float(distance_sum / max(n_steps, 1)):.4f}")
+    print(f"ball_speed_mps_mean={float(ball_speed_sum / max(n_steps, 1)):.4f}")
+    print(f"ball_speed_to_target_mps_mean={float(ball_speed_to_target_sum / max(n_steps, 1)):.4f}")
 
 
 def parse_args() -> argparse.Namespace:

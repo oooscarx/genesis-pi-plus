@@ -13,6 +13,8 @@ from .math_utils import normalize_xy
 class KickRewardScales:
     ball_velocity_to_target: float
     ball_speed_match: float
+    ball_progress_to_target: float
+    effective_kick_speed: float
     final_target_distance: float
     ball_contact: float
     has_contacted_ball: float
@@ -30,6 +32,7 @@ class KickRewardScales:
     joint_limit: float
     fall: float
     not_kickable: float
+    base_vertical_velocity: float
 
 
 def compute_kick_rewards(
@@ -37,10 +40,12 @@ def compute_kick_rewards(
     scales: KickRewardScales,
     ball_pos: torch.Tensor,
     prev_ball_pos: torch.Tensor,
+    initial_ball_pos: torch.Tensor,
     target_pos: torch.Tensor,
     desired_ball_speed: torch.Tensor,
     base_rpy: torch.Tensor,
     base_height: torch.Tensor,
+    prev_base_height: torch.Tensor,
     action: torch.Tensor,
     prev_action: torch.Tensor,
     torque: torch.Tensor,
@@ -54,12 +59,17 @@ def compute_kick_rewards(
     control_dt: float,
     base_height_target: float,
     base_height_sigma: float,
+    min_effective_ball_speed: float,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     ball_vel = (ball_pos[:, :2] - prev_ball_pos[:, :2]) / control_dt
     target_vec = target_pos[:, :2] - ball_pos[:, :2]
     target_dir = normalize_xy(target_vec)
+    initial_target_dir = normalize_xy(target_pos[:, :2] - initial_ball_pos[:, :2])
     speed_to_target = torch.sum(ball_vel * target_dir, dim=-1)
     speed_mag = torch.linalg.norm(ball_vel, dim=-1)
+    ball_progress_to_target = torch.sum((ball_pos[:, :2] - initial_ball_pos[:, :2]) * initial_target_dir, dim=-1)
+    effective_kick_speed = torch.clamp((speed_to_target - min_effective_ball_speed) / max(min_effective_ball_speed, 1.0e-6), min=0.0, max=1.0)
+    base_vertical_velocity = torch.abs((base_height - prev_base_height) / control_dt)
     base_upright = torch.exp(-3.0 * torch.sum(torch.square(base_rpy[:, :2]), dim=-1))
     base_height_reward = torch.exp(-torch.square(base_height - base_height_target) / max(base_height_sigma**2, 1.0e-6))
     stable_gate = ((~fallen).float() * base_upright * base_height_reward).detach()
@@ -70,6 +80,8 @@ def compute_kick_rewards(
     terms = {
         "ball_velocity_to_target": post_contact_gate * torch.clamp(speed_to_target, min=0.0),
         "ball_speed_match": post_contact_gate * torch.exp(-torch.square(speed_mag - desired_ball_speed)),
+        "ball_progress_to_target": post_contact_gate * torch.clamp(ball_progress_to_target / 0.5, min=0.0, max=1.0),
+        "effective_kick_speed": post_contact_gate * effective_kick_speed,
         "final_target_distance": post_contact_gate * torch.exp(-torch.linalg.norm(target_vec, dim=-1)),
         "ball_contact": stable_gate * contact.float(),
         "has_contacted_ball": stable_gate * has_contacted_ball.float(),
@@ -87,6 +99,7 @@ def compute_kick_rewards(
         "joint_limit": torch.zeros_like(base_height),
         "fall": fallen.float(),
         "not_kickable": (~kickable).float(),
+        "base_vertical_velocity": base_vertical_velocity,
     }
 
     reward = torch.zeros_like(base_height)
