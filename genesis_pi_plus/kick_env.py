@@ -151,8 +151,9 @@ class PiPlusKickEnv:
         base_rpy = quat_wxyz_to_rpy_torch(base_quat)
         fallen = self._fallen(base_pos, base_rpy)
         timeout = self.episode_length_buf >= self.max_episode_length
-        done = fallen | timeout
         foot_ball_distance = self._foot_ball_distance()
+        ball_escaped = foot_ball_distance > float(self.reward_cfg["thresholds"]["ball_escape_distance_m"])
+        done = fallen | timeout | ball_escaped
         contact = foot_ball_distance < float(self.reward_cfg["thresholds"]["contact_distance_m"])
 
         rewards, terms = compute_kick_rewards(
@@ -189,6 +190,7 @@ class PiPlusKickEnv:
         self.extras["log"]["metric/foot_ball_delta_m"] = (prev_foot_ball_distance - foot_ball_distance).mean().detach()
         self.extras["log"]["episode/success_proxy"] = (torch.linalg.norm(self.ball_pos[:, :2] - self.target_pos, dim=-1) < float(self.reward_cfg["thresholds"]["success_distance_m"])).float().mean()
         self.extras["log"]["episode/fall_rate"] = fallen.float().mean()
+        self.extras["log"]["episode/ball_escape_rate"] = ball_escaped.float().mean()
         return obs, rewards, done, self.extras
 
     def _build_genesis(self, backend: str | None, headless: bool) -> None:

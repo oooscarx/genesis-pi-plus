@@ -69,7 +69,7 @@ def compute_kick_rewards(
         "foot_ball_proximity": stable_gate * torch.exp(-torch.square(foot_ball_distance / 0.12)),
         "foot_ball_distance": stable_gate * foot_ball_distance,
         "foot_ball_closer": stable_gate * torch.clamp(foot_ball_delta / 0.05, min=-1.0, max=1.0),
-        "ball_escape": (foot_ball_distance > 0.5).float(),
+        "ball_escape": (foot_ball_distance > 0.45).float(),
         "base_upright": base_upright,
         "base_height": base_height_reward,
         "support_stability": torch.exp(-torch.linalg.norm(base_rpy[:, :2], dim=-1)),

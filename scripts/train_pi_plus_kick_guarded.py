@@ -136,7 +136,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--chunk-iterations", type=int, default=250)
     parser.add_argument("--eval-steps", type=int, default=125)
     parser.add_argument("--max-fall-rate", type=float, default=0.15)
-    parser.add_argument("--max-foot-ball-distance", type=float, default=1.0)
+    parser.add_argument("--max-foot-ball-distance", type=float, default=0.6)
     parser.add_argument("--backend", default=None)
     parser.add_argument("--device", default=None)
     parser.add_argument("--log-dir", default="runs/pi_plus_kick_guarded")
