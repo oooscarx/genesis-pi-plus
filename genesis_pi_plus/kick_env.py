@@ -92,8 +92,7 @@ class PiPlusKickEnv:
         self.scene = None
         self.robot = None
         self.ball = None
-        self.initial_robot_pos: torch.Tensor | None = None
-        self.initial_robot_quat: torch.Tensor | None = None
+        self.initial_robot_qpos: torch.Tensor | None = None
         self.dof_idx: list[int] = list(range(self.num_actions))
         self.base_link_idx = BASE_LINK_LOCAL_IDX_FALLBACK
         self.foot_link_idx: list[int] = []
@@ -218,8 +217,7 @@ class PiPlusKickEnv:
         self.base_link_idx = self._base_link_idx()
         self.foot_link_idx = self._link_indices(self.model_info.foot_link_names or ["l_ankle_roll_link", "r_ankle_roll_link"])
         self.foot_link_global_idx = [int(self.robot.links[i].idx) for i in self.foot_link_idx]
-        self.initial_robot_pos = _as_torch(self.robot.get_pos(), self.device).reshape(self.num_envs, 3).clone()
-        self.initial_robot_quat = _as_torch(self.robot.get_quat(), self.device).reshape(self.num_envs, 4).clone()
+        self.initial_robot_qpos = _as_torch(self.robot.get_qpos(), self.device).reshape(self.num_envs, -1).clone()
 
     def _reset_idx(self, env_ids: torch.Tensor) -> None:
         if env_ids.numel() == 0:
@@ -234,10 +232,8 @@ class PiPlusKickEnv:
             self.baseline.reset(self.num_envs, env_ids)
         self._sample_task(env_ids)
         if self.robot is not None:
-            if self.initial_robot_pos is not None:
-                self.robot.set_pos(self.initial_robot_pos[env_ids], envs_idx=env_ids, zero_velocity=True)
-            if self.initial_robot_quat is not None:
-                self.robot.set_quat(self.initial_robot_quat[env_ids], envs_idx=env_ids, zero_velocity=True)
+            if self.initial_robot_qpos is not None:
+                self.robot.set_qpos(self.initial_robot_qpos[env_ids], envs_idx=env_ids, zero_velocity=True)
             self._set_dofs_position(self.default_pos[env_ids], env_ids)
             self.robot.zero_all_dofs_velocity(envs_idx=env_ids)
         if self.ball is not None:
