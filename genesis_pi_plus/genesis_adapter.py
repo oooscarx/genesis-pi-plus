@@ -38,7 +38,7 @@ def _import_genesis(headless: bool = True):
 def init_genesis(headless: bool = True, backend: str | None = None):
     """Initialize Genesis with a headless-safe default."""
     gs = _import_genesis(headless=headless)
-    backend_name = (os.environ.get("GENESIS_BACKEND") or backend or "cuda").lower()
+    backend_name = (backend or os.environ.get("GENESIS_BACKEND") or "cuda").lower()
     backend_obj = _select_backend(gs, backend_name)
     try:
         gs.init(backend=backend_obj)
