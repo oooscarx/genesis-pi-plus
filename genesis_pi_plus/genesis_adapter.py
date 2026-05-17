@@ -151,8 +151,8 @@ def _add_soccer_field_visuals(scene, gs: Any, scene_cfg: dict[str, Any]) -> None
     base = tuple(scene_cfg.get("ground_color", [0.10, 0.45, 0.16, 1.0]))
     alt = tuple(np.clip(np.array(base) * np.array([0.78, 1.12, 0.82, 1.0]), 0.0, 1.0))
     line_color = tuple(scene_cfg.get("field_line_color", [0.93, 0.95, 0.90, 1.0]))
-    z = float(scene_cfg.get("field_visual_z", -0.006))
-    thickness = 0.004
+    z = float(scene_cfg.get("field_visual_z", 0.006))
+    thickness = 0.003
 
     stripes = max(1, int(scene_cfg.get("field_stripe_count", 10)))
     stripe_w = plane_x / stripes
